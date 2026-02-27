@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login – RecoAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:     #0b0c10;
+      --card:   #13151c;
+      --accent: #f5c518;
+      --text:   #e8eaf0;
+      --muted:  #7a7f96;
+      --error:  #ff5b5b;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 60%, rgba(245,197,24,0.07) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* ─ CARD ─ */
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      padding: 2.5rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      margin-bottom: 2rem;
+      display: inline-block;
+    }
+
+    h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+    .sub a { color: var(--accent); text-decoration: none; }
+
+    .form-group { margin-bottom: 1.2rem; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.4rem;
+    }
+
+    .field-wrap { position: relative; }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    /* eye toggle button */
+    .eye-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .eye-btn:hover { color: var(--text); }
+
+    .err-msg {
+      display: none;
+      color: var(--error);
+      font-size: 0.78rem;
+      margin-top: 0.35rem;
+    }
+    .input-error { border-color: var(--error) !important; }
+    .input-error ~ .err-msg { display: block; }
+    /* fix: sibling not next-sibling here so we use JS to add text */
+
+    .forgot {
+      text-align: right;
+      margin-top: -0.6rem;
+      margin-bottom: 1.2rem;
+    }
+    .forgot a {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .forgot a:hover { color: var(--accent); }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover { background: #e0b014; }
+    .btn-submit:active { transform: scale(0.98); }
+
+    /* spinner on button while "loading" */
+    .btn-submit.loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .error-banner {
+      display: none;
+      background: rgba(255,91,91,0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.07);
+    }
+
+    .back-home {
+      display: block;
+      text-align: center;
+      margin-top: 1.5rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-home:hover { color: var(--accent); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-card">
+
+  <a href="index.html" class="logo">RecoAI</a>
+
+  <h2>Welcome back 👋</h2>
+  <p class="sub">Don't have an account? <a href="register.html">Create one free</a></p>
+
+  <!-- Error banner shown when credentials are wrong -->
+  <div class="error-banner" id="errorBanner">
+    ⚠️ Invalid email or password. Please try again.
+  </div>
+
+  <form id="loginForm" novalidate>
+
+    <!-- Email Field -->
+    <div class="form-group">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
+      <span class="err-msg" id="emailErr">Enter a valid email</span>
+    </div>
+
+    <!-- Password Field with show/hide toggle -->
+    <div class="form-group">
+      <label for="password">Password</label>
+      <div class="field-wrap">
+        <input type="password" id="password" placeholder="Your password" autocomplete="current-password"/>
+        <!-- clicking this toggles password visibility -->
+        <button type="button" class="eye-btn" id="eyeBtn" title="Show / hide password">👁</button>
+      </div>
+      <span class="err-msg" id="passErr">Password is required</span>
+    </div>
+
+    <!-- Forgot password link -->
+    <div class="forgot"><a href="#">Forgot password?</a></div>
+
+    <button type="submit" class="btn-submit" id="submitBtn">Sign In →</button>
+  </form>
+
+  <div class="divider">or</div>
+
+  <a href="index.html" class="back-home">← Back to home</a>
+</div>
+
+<!-- ════ SCRIPT ════ -->
+<script>
+  // ── Toggle show / hide password ──
+  const eyeBtn   = document.getElementById('eyeBtn');
+  const passInput= document.getElementById('password');
+
+  eyeBtn.addEventListener('click', function() {
+    // Switch input type between password and text
+    const isHidden = passInput.type === 'password';
+    passInput.type = isHidden ? 'text' : 'password';
+    eyeBtn.textContent = isHidden ? '🙈' : '👁';
+  });
+
+  // ── Form Submission ──
+  document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // stop page reload
+
+    const email    = document.getElementById('email');
+    const password = document.getElementById('password');
+    const emailErr = document.getElementById('emailErr');
+    const passErr  = document.getElementById('passErr');
+    const banner   = document.getElementById('errorBanner');
+    const btn      = document.getElementById('submitBtn');
+
+    let valid = true;
+
+    // Hide old banner
+    banner.style.display = 'none';
+
+    // Validate Email
+    const emailOK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
+    if (!emailOK) {
+      email.classList.add('input-error');
+      emailErr.style.display = 'block';
+      valid = false;
+    } else {
+      email.classList.remove('input-error');
+      emailErr.style.display = 'none';
+    }
+
+    // Validate Password
+    if (!password.value.trim()) {
+      password.classList.add('input-error');
+      passErr.style.display = 'block';
+      valid = false;
+    } else {
+      password.classList.remove('input-error');
+      passErr.style.display = 'none';
+    }
+
+    if (!valid) return;
+
+    // ── Simulate API login call ──
+    btn.textContent = 'Signing in…';
+    btn.classList.add('loading');
+
+    setTimeout(() => {
+      // DEMO: accept any email + password with length >= 8
+      // In real app: replace with fetch('/api/login', { method:'POST', body: JSON.stringify({email, password}) })
+      if (password.value.length >= 8) {
+        // Success → redirect to dashboard (replace with your dashboard URL)
+        window.location.href = 'index.html';
+      } else {
+        // Show error banner
+        banner.style.display = 'block';
+        btn.textContent = 'Sign In →';
+        btn.classList.remove('loading');
+      }
+    }, 1200); // simulates network delay
+  });
+</script>
+
+</body>
+</html>

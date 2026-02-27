@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RecoAI – Smart Product Recommendations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    /* ── RESET & BASE ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #0b0c10;
+      --card:    #13151c;
+      --accent:  #f5c518;   /* warm gold */
+      --accent2: #ff6b35;   /* coral */
+      --text:    #e8eaf0;
+      --muted:   #7a7f96;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.4rem 6%;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11,12,16,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.5rem;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+
+    .logo span { color: var(--accent2); }
+
+    .nav-links { display: flex; gap: 1.8rem; align-items: center; }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1.5rem;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-outline {
+      border: 1.5px solid var(--accent);
+      color: var(--accent);
+      background: transparent;
+    }
+    .btn-outline:hover { background: var(--accent); color: #000; }
+
+    .btn-solid {
+      background: var(--accent);
+      color: #000;
+      border: none;
+    }
+    .btn-solid:hover { background: #e0b014; transform: translateY(-1px); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 4rem 6%;
+      position: relative;
+    }
+
+    /* glowing blob */
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,197,24,0.12) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -55%);
+      pointer-events: none;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(245,197,24,0.1);
+      border: 1px solid rgba(245,197,24,0.3);
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-bottom: 2rem;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      line-height: 1.1;
+      letter-spacing: -2px;
+      margin-bottom: 1.5rem;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      max-width: 520px;
+      color: var(--muted);
+      font-size: 1.1rem;
+      line-height: 1.7;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+
+    .btn-solid.lg { padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: 10px; }
+    .btn-outline.lg { padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: 10px; }
+
+    /* ── FEATURES ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+      padding: 5rem 6%;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 2rem;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .card:hover { border-color: rgba(245,197,24,0.3); transform: translateY(-4px); }
+
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .card p { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      text-align: center;
+      padding: 5rem 6%;
+    }
+
+    .cta-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      margin-bottom: 1rem;
+      letter-spacing: -1px;
+    }
+
+    .cta-section p { color: var(--muted); margin-bottom: 2rem; font-size: 1rem; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    /* ── ANIMATION ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ NAV ════ -->
+<nav>
+  <div class="logo">Reco<span>AI</span></div>
+  <div class="nav-links">
+    <a href="#">Features</a>
+    <a href="#">How it Works</a>
+    <a href="login.html" class="btn btn-outline">Login</a>
+    <a href="register.html" class="btn btn-solid">Get Started</a>
+  </div>
+</nav>
+
+<!-- ════ HERO ════ -->
+<section class="hero">
+  <div class="badge">✦ AI-Powered Recommendations</div>
+
+  <h1>Find Products You'll<br/><em>Actually Love</em></h1>
+
+  <p class="hero-sub">
+    RecoAI learns your taste and delivers hyper-personalised product
+    picks — from fashion to tech, all in one smart dashboard.
+  </p>
+
+  <div class="hero-cta">
+    <a href="register.html" class="btn btn-solid lg">Create Free Account</a>
+    <a href="login.html"    class="btn btn-outline lg">Sign In</a>
+  </div>
+</section>
+
+<!-- ════ FEATURES ════ -->
+<section class="features">
+  <div class="card">
+    <div class="card-icon">🧠</div>
+    <h3>AI Learning Engine</h3>
+    <p>Our model studies your browsing patterns and purchase history to surface products tailored for you.</p>
+  </div>
+  <div class="card">
+    <div class="card-icon">⚡</div>
+    <h3>Real-Time Updates</h3>
+    <p>Recommendations refresh as new products arrive, so you always see the freshest picks first.</p>
+  </div>
+  <div class="card">
+    <div class="card-icon">🔒</div>
+    <h3>Private & Secure</h3>
+    <p>Your data stays yours. We use end-to-end encryption and never sell your profile to third parties.</p>
+  </div>
+  <div class="card">
+    <div class="card-icon">🎯</div>
+    <h3>Taste Profiling</h3>
+    <p>Answer a quick quiz or just browse — the system builds your taste profile automatically.</p>
+  </div>
+</section>
+
+<!-- ════ BOTTOM CTA ════ -->
+<section class="cta-section">
+  <h2>Ready to Discover?</h2>
+  <p>Join thousands of users getting smarter recommendations every day.</p>
+  <a href="register.html" class="btn btn-solid lg">Register Now — It's Free</a>
+</section>
+
+<footer>© 2025 RecoAI · Built with 💛 for smart shoppers</footer>
+
+</body>
+</html>
