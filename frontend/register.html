@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register – RecoAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:     #0b0c10;
+      --card:   #13151c;
+      --accent: #f5c518;
+      --text:   #e8eaf0;
+      --muted:  #7a7f96;
+      --error:  #ff5b5b;
+      --success:#4caf7d;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    /* split background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(ellipse at 70% 30%, rgba(245,197,24,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      max-width: 880px;
+      width: 100%;
+      background: var(--card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      overflow: hidden;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    /* ─ LEFT PANEL ─ */
+    .panel-left {
+      background: linear-gradient(145deg, #1a1b24, #0f1016);
+      padding: 3rem 2.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.6rem;
+      color: var(--accent);
+      margin-bottom: 2.5rem;
+    }
+
+    .panel-left h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      line-height: 1.25;
+      margin-bottom: 1rem;
+    }
+
+    .panel-left p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin-bottom: 2rem;
+    }
+
+    .perk {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .perk-icon {
+      width: 32px; height: 32px;
+      background: rgba(245,197,24,0.12);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .perk-text strong { display: block; font-size: 0.85rem; margin-bottom: 0.2rem; }
+    .perk-text span   { color: var(--muted); font-size: 0.8rem; }
+
+    /* ─ RIGHT PANEL ─ */
+    .panel-right { padding: 3rem 2.5rem; }
+
+    .panel-right h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .panel-right .sub {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-bottom: 2rem;
+    }
+
+    .panel-right .sub a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    /* FORM */
+    .form-group { margin-bottom: 1.2rem; }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+
+    /* row for two inputs side by side */
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .err-msg {
+      display: none;
+      color: var(--error);
+      font-size: 0.78rem;
+      margin-top: 0.35rem;
+    }
+
+    .input-error { border-color: var(--error) !important; }
+    .input-error + .err-msg { display: block; }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.85rem;
+      margin-top: 0.5rem;
+      background: var(--accent);
+      color: #000;
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn-submit:hover { background: #e0b014; }
+    .btn-submit:active { transform: scale(0.98); }
+
+    .success-box {
+      display: none;
+      background: rgba(76,175,125,0.12);
+      border: 1px solid var(--success);
+      color: var(--success);
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .container { grid-template-columns: 1fr; }
+      .panel-left { display: none; }
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ═══ LEFT INFO PANEL ═══ -->
+  <div class="panel-left">
+    <div class="logo">RecoAI</div>
+    <h2>Your personal<br/>shopping brain.</h2>
+    <p>Create an account and start getting recommendations that actually match your taste.</p>
+
+    <div class="perk">
+      <div class="perk-icon">🎯</div>
+      <div class="perk-text">
+        <strong>Personalised picks</strong>
+        <span>Curated just for you, updated daily</span>
+      </div>
+    </div>
+    <div class="perk">
+      <div class="perk-icon">⚡</div>
+      <div class="perk-text">
+        <strong>Instant dashboard</strong>
+        <span>See results the moment you sign up</span>
+      </div>
+    </div>
+    <div class="perk">
+      <div class="perk-icon">🔒</div>
+      <div class="perk-text">
+        <strong>100% private</strong>
+        <span>Your data is never shared or sold</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT FORM PANEL ═══ -->
+  <div class="panel-right">
+    <h3>Create Account</h3>
+    <p class="sub">Already have one? <a href="login.html">Sign in</a></p>
+
+    <form id="registerForm" novalidate>
+
+      <!-- Full name row -->
+      <div class="row">
+        <div class="form-group">
+          <label for="firstName">First Name</label>
+          <input type="text" id="firstName" placeholder="John"/>
+          <span class="err-msg">Required</span>
+        </div>
+        <div class="form-group">
+          <label for="lastName">Last Name</label>
+          <input type="text" id="lastName" placeholder="Doe"/>
+          <span class="err-msg">Required</span>
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com"/>
+        <span class="err-msg">Enter a valid email</span>
+      </div>
+
+      <!-- Password -->
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="Min 8 characters"/>
+        <span class="err-msg">Min 8 characters</span>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label for="confirm">Confirm Password</label>
+        <input type="password" id="confirm" placeholder="Repeat password"/>
+        <span class="err-msg">Passwords do not match</span>
+      </div>
+
+      <button type="submit" class="btn-submit">Create My Account →</button>
+    </form>
+
+    <div class="success-box" id="successBox">
+      🎉 Account created! Redirecting to login…
+    </div>
+  </div>
+</div>
+
+<!-- ════ VALIDATION SCRIPT ════ -->
+<script>
+  // Simple utility: mark field as error or clear it
+  function setError(input, msg) {
+    input.classList.add('input-error');
+    // Update error message text if provided
+    if (msg) input.nextElementSibling.textContent = msg;
+  }
+  function clearError(input) {
+    input.classList.remove('input-error');
+  }
+
+  document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // stop page reload
+
+    // Grab field values
+    const firstName = document.getElementById('firstName');
+    const lastName  = document.getElementById('lastName');
+    const email     = document.getElementById('email');
+    const password  = document.getElementById('password');
+    const confirm   = document.getElementById('confirm');
+
+    let valid = true;
+
+    // First name check
+    if (!firstName.value.trim()) { setError(firstName); valid = false; }
+    else clearError(firstName);
+
+    // Last name check
+    if (!lastName.value.trim()) { setError(lastName); valid = false; }
+    else clearError(lastName);
+
+    // Email format check using regex
+    const emailOK = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value);
+    if (!emailOK) { setError(email); valid = false; }
+    else clearError(email);
+
+    // Password length
+    if (password.value.length < 8) { setError(password); valid = false; }
+    else clearError(password);
+
+    // Confirm match
+    if (confirm.value !== password.value) { setError(confirm, 'Passwords do not match'); valid = false; }
+    else clearError(confirm);
+
+    // If all valid — show success message
+    if (valid) {
+      document.querySelector('.btn-submit').disabled = true;
+      document.getElementById('successBox').style.display = 'block';
+
+      // In a real app you'd send data to your server here with fetch()
+      // Simulating redirect after 2 seconds
+      setTimeout(() => { window.location.href = 'login.html'; }, 2000);
+    }
+  });
+</script>
+
+</body>
+</html>
