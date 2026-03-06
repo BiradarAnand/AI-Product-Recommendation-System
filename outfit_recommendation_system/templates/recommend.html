@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Your Recommendations - Smart Outfit System{% endblock %}
+
+{% block content %}
+<header class="header">
+    <h1>Smart Outfit Recommendation</h1>
+    <p>Wait no more, here is your personalized AI-curated outfit!</p>
+</header>
+
+<main class="dashboard-single"
+    style="display: flex; justify-content: center; flex-direction: column; align-items: center; width: 100%;">
+    {% if outfit %}
+    <section class="results-section glass-panel fade-in" style="width: 100%; max-width: 800px;">
+        <h2>Your Curated Outfit</h2>
+        <div class="outfit-grid">
+
+            {% if outfit.Top %}
+            <div class="outfit-item">
+                <img src="{{ outfit.Top.img }}" alt="Top Image"
+                    style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                <div class="item-details" style="flex: 1;">
+                    <h3 style="color: var(--primary-dark); font-size: 0.8rem;">[ Top Wear ] - {{ outfit.Top.brand }}
+                    </h3>
+                    <p class="item-name" style="margin-bottom: 0.2rem;">{{ outfit.Top.name }}</p>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span style="color: #f59e0b; font-weight: bold;">★ {{ outfit.Top.rating }}</span> | ${{
+                        outfit.Top.price }} | Sold on <strong>{{ outfit.Top.website }}</strong>
+                    </div>
+                </div>
+                <a href="{{ outfit.Top.buy_link }}" target="_blank" class="cta-button"
+                    style="width: auto; padding: 0.6rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Buy Now</a>
+            </div>
+            {% endif %}
+
+            {% if outfit.Bottom %}
+            <div class="outfit-item">
+                <img src="{{ outfit.Bottom.img }}" alt="Bottom Image"
+                    style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                <div class="item-details" style="flex: 1;">
+                    <h3 style="color: var(--primary-dark); font-size: 0.8rem;">[ Bottom Wear ] - {{ outfit.Bottom.brand
+                        }}</h3>
+                    <p class="item-name" style="margin-bottom: 0.2rem;">{{ outfit.Bottom.name }}</p>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span style="color: #f59e0b; font-weight: bold;">★ {{ outfit.Bottom.rating }}</span> | ${{
+                        outfit.Bottom.price }} | Sold on <strong>{{ outfit.Bottom.website }}</strong>
+                    </div>
+                </div>
+                <a href="{{ outfit.Bottom.buy_link }}" target="_blank" class="cta-button"
+                    style="width: auto; padding: 0.6rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Buy Now</a>
+            </div>
+            {% endif %}
+
+            {% if outfit.Footwear %}
+            <div class="outfit-item">
+                <img src="{{ outfit.Footwear.img }}" alt="Footwear Image"
+                    style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                <div class="item-details" style="flex: 1;">
+                    <h3 style="color: var(--primary-dark); font-size: 0.8rem;">[ Footwear ] - {{ outfit.Footwear.brand
+                        }}</h3>
+                    <p class="item-name" style="margin-bottom: 0.2rem;">{{ outfit.Footwear.name }}</p>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span style="color: #f59e0b; font-weight: bold;">★ {{ outfit.Footwear.rating }}</span> | ${{
+                        outfit.Footwear.price }} | Sold on <strong>{{ outfit.Footwear.website }}</strong>
+                    </div>
+                </div>
+                <a href="{{ outfit.Footwear.buy_link }}" target="_blank" class="cta-button"
+                    style="width: auto; padding: 0.6rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Buy Now</a>
+            </div>
+            {% endif %}
+
+            {% if outfit.Accessory %}
+            <div class="outfit-item">
+                <img src="{{ outfit.Accessory.img }}" alt="Accessory Image"
+                    style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 1px solid var(--border);">
+                <div class="item-details" style="flex: 1;">
+                    <h3 style="color: var(--primary-dark); font-size: 0.8rem;">[ Accessory ] - {{ outfit.Accessory.brand
+                        }}</h3>
+                    <p class="item-name" style="margin-bottom: 0.2rem;">{{ outfit.Accessory.name }}</p>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        <span style="color: #f59e0b; font-weight: bold;">★ {{ outfit.Accessory.rating }}</span> | ${{
+                        outfit.Accessory.price }} | Sold on <strong>{{ outfit.Accessory.website }}</strong>
+                    </div>
+                </div>
+                <a href="{{ outfit.Accessory.buy_link }}" target="_blank" class="cta-button"
+                    style="width: auto; padding: 0.6rem 1.2rem; font-size: 0.9rem; text-decoration: none;">Buy Now</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 1rem;">
+            <button class="cta-button"
+                style="width: auto; padding: 0.8rem 2rem; background: var(--text-main); color: var(--background);">Save
+                Recommendation</button>
+        </div>
+    </section>
+    {% else %}
+    <section class="results-section glass-panel empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h2>Oops!</h2>
+        <p>We couldn't find a matching outfit. Try adjusting your preferences.</p>
+    </section>
+    {% endif %}
+
+    <a href="/recommend_form" class="back-link"
+        style="margin-top: 1.5rem; color: var(--primary-dark); font-weight: 600; text-decoration: none;">← Try another
+        combination</a>
+</main>
+{% endblock %}
