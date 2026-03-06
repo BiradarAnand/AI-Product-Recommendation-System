@@ -383,7 +383,7 @@
 
     <script>
         let cart = [];
-        const API_URL = 'http://127.0.0.1:8080/api';
+        const API_URL = 'http://localhost:8002';
         const userId = localStorage.getItem('userId') || 1; // Default to 1 if missing
 
         // DOM Elements
@@ -408,46 +408,75 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
-        // Generate Card HTML
+        // Generate Card HTML matching MySQL Object Schema
         function createProductCard(prod) {
-            // Generate a random mock icon based on title
-            const emoji = prod.title.includes('Laptop') ? '💻' :
-                prod.title.includes('Watch') ? '⌚' :
-                    prod.title.includes('Earbuds') ? '🎧' :
-                        prod.title.includes('Chair') ? '🪑' : '📱';
+            const title = prod.product_name || prod.name;
+            const emoji = title.includes('Shirt') ? '👔' :
+                title.includes('Shoe') ? '👞' :
+                    title.includes('Pant') ? '👖' :
+                        title.includes('Watch') ? '⌚' : '👗';
 
             return `
       <div class="card">
         <div class="img-placeholder">${emoji}</div>
-        <div class="prod-cat">${prod.category}</div>
-        <div class="prod-title">${prod.title}</div>
+        <div class="prod-cat">${prod.category || prod.source}</div>
+        <div class="prod-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</div>
+        <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem;">${prod.brand || 'Apparel'}</div>
         <div class="prod-price">$${prod.price.toFixed(2)}</div>
-        <button class="btn-add" onclick="addToCart(${prod.id}, '${prod.title}', ${prod.price})">+ Add to Cart</button>
+        <button class="btn-add" onclick="addToCart('${prod.product_id}', '${title.replace(/'/g, "\\'")}', ${prod.price})">+ Add to Cart</button>
       </div>`;
         }
 
-        // Fetch Endpoints
-        function fetchProducts() {
-            fetch(`${API_URL}/products`)
-                .then(res => res.json())
-                .then(data => {
-                    productsGrid.innerHTML = data.map(createProductCard).join('');
-                })
-                .catch(err => {
-                    productsGrid.innerHTML = '<div class="loader">Error loading products. Is the server running?</div>';
-                });
+        // Fetch Endpoints using the new API Port
+        async function fetchProducts() {
+            try {
+                const res = await fetch(`${API_URL}/products`);
+                const data = await res.json();
+                if (data.products && data.products.length > 0) {
+                    productsGrid.innerHTML = data.products.map(createProductCard).join('');
+                } else {
+                    productsGrid.innerHTML = '<div class="loader">Database online but no products scraped yet. Generating items into db...</div>';
+                }
+            } catch (e) {
+                productsGrid.innerHTML = '<div class="loader">Error loading products. Is the MySQL FastAPI server running?</div>';
+            }
         }
 
-        function fetchRecommendations() {
-            // pass a mock history
-            fetch(`${API_URL}/recommendations/${userId}?history=1,2`)
-                .then(res => res.json())
-                .then(data => {
-                    recoGrid.innerHTML = data.recommendations.map(createProductCard).join('');
-                })
-                .catch(err => {
-                    recoGrid.innerHTML = '<div class="loader">Error loading recommendations.</div>';
+        async function fetchRecommendations() {
+            // Passing default user preference profile payload since this is the generic dashboard load
+            const prefs = {
+                occasion: "office",
+                weather: "cold",
+                gender: "male",
+                style: "formal",
+                color_preference: "black"
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/recommend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prefs)
                 });
+
+                const data = await res.json();
+
+                // Unpack the Custom Response format (topwear, bottomwear arrays)
+                const allSuggestedProducts = [
+                    ...(data.outfit.topwear || []),
+                    ...(data.outfit.bottomwear || []),
+                    ...(data.outfit.footwear || []),
+                    ...(data.outfit.accessories || [])
+                ];
+
+                if (allSuggestedProducts.length > 0) {
+                    recoGrid.innerHTML = allSuggestedProducts.map(createProductCard).join('');
+                } else {
+                    recoGrid.innerHTML = '<div class="loader">Waiting on Machine Learning model synchronization.</div>';
+                }
+            } catch (e) {
+                recoGrid.innerHTML = '<div class="loader">Error processing recommendation.</div>';
+            }
         }
 
         // Cart Logic

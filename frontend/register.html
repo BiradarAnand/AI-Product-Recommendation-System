@@ -48,7 +48,7 @@
 
     .container {
       display: grid;
-      grid-template-columns: 1fr 1fr ;
+      grid-template-columns: 1fr 1fr;
       max-width: 880px;
       width: 100%;
       background: var(--card);
@@ -266,20 +266,11 @@
 
   <div class="container">
 
-<<<<<<< Updated upstream
-  <!-- ═══ LEFT INFO PANEL ═══
-  <div class="panel-left">
-    <div class="logo">RecoAI</div>
-    <h2>Your personal<br/>shopping brain.</h2>
-    <p>Create an account and start getting recommendations that actually match your taste.</p>
-=======
     <!-- ═══ LEFT INFO PANEL ═══ -->
     <div class="panel-left">
       <div class="logo">RecoAI</div>
       <h2>Your personal<br />shopping brain.</h2>
       <p>Create an account and start getting recommendations that actually match your taste.</p>
->>>>>>> Stashed changes
-
       <div class="perk">
         <div class="perk-icon">🎯</div>
         <div class="perk-text">
@@ -409,8 +400,8 @@
           email: email.value,
           password: password.value
         };
-        // Real API Call
-        fetch('http://127.0.0.1:8080/api/register', {
+        // Real API Call mapped to Port 8002 SQLite Server
+        fetch('http://localhost:8002/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)

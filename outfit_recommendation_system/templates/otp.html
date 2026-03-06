@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Verify OTP - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<main class="dashboard-single" style="display: flex; justify-content: center;">
+    <section class="form-section glass-panel" style="width: 100%; max-width: 500px; text-align: center;">
+        <div class="auth-icon" style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+        <h2>Verify Identity</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">We've sent a 4-digit OTP to <strong>{{ contact
+                }}</strong>.</p>
+
+        <form action="/verify_otp" method="POST" id="otpForm" style="text-align: left;">
+            <div class="form-group">
+                <label for="otp">Enter OTP Code</label>
+                <input type="text" name="otp" id="otp" required class="form-input" placeholder="e.g. 1234" maxlength="4"
+                    style="letter-spacing: 5px; text-align: center; font-size: 1.5rem; font-weight: bold;">
+            </div>
+
+            <button type="submit" class="cta-button" style="background-color: #a88e6a; margin-top: 1rem;">Verify OTP &
+                Login</button>
+        </form>
+
+        <a href="/login" class="back-link"
+            style="display: block; margin-top: 2rem; color: var(--text-muted); font-size: 0.9rem; text-decoration: underline;">Resend
+            OTP</a>
+    </section>
+</main>
+{% endblock %}

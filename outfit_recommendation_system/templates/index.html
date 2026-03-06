@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<section class="hero glass-panel text-center">
+    <h1>Smart Outfit Recommendation System</h1>
+    <p class="hero-subtitle">The ultimate AI-based tool to curate the perfect wardrobe combinations tailored directly to
+        your preferences, weather, and occasion.</p>
+
+    <a href="/login" class="cta-button"
+        style="display: inline-block; width: auto; padding: 1rem 2.5rem; text-decoration: none;">Get Started</a>
+</section>
+
+<section class="features glass-panel">
+    <h2>Powerful System Features</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h3>AI Recommendation</h3>
+            <p>Our sophisticated K-Nearest Neighbors model matches you to perfectly curated styles.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">👔</div>
+            <h3>Occasion-Based Dressing</h3>
+            <p>Find outfits meant specifically for Office, Casual Outings, Weddings, Parties, or Gym.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🌦️</div>
+            <h3>Weather-Based Suggestions</h3>
+            <p>Rain or shine, our datasets categorize clothing based on cold, hot, or rainy seasons.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">✨</div>
+            <h3>Personalized Fashion</h3>
+            <p>Adjust variables like color preferences and overall aesthetics to fit your personal identity.</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

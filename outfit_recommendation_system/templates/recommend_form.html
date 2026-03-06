@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Recommendation Form - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<header class="header">
+    <h1>Smart Outfit Recommendation</h1>
+    <p>Select your preferences below and let AI curate the perfect outfit for you!</p>
+</header>
+
+<main class="dashboard-single" style="display: flex; justify-content: center;">
+    <section class="form-section glass-panel" style="width: 100%; max-width: 600px;">
+        <h2>Your Preferences</h2>
+        <form action="/recommend" method="POST" id="recommendForm">
+            <div class="form-group">
+                <label for="occasion">Occasion</label>
+                <select name="occasion" id="occasion" required>
+                    <option value="office" {% if user_pref and user_pref.occasion=='office' %}selected{% endif %}>Office
+                    </option>
+                    <option value="casual" {% if user_pref and user_pref.occasion=='casual' %}selected{% endif %}>Casual
+                        Outing</option>
+                    <option value="party" {% if user_pref and user_pref.occasion=='party' %}selected{% endif %}>Party
+                    </option>
+                    <option value="wedding" {% if user_pref and user_pref.occasion=='wedding' %}selected{% endif %}>
+                        Wedding</option>
+                    <option value="gym" {% if user_pref and user_pref.occasion=='gym' %}selected{% endif %}>Gym</option>
+                    <option value="travel" {% if user_pref and user_pref.occasion=='travel' %}selected{% endif %}>Travel
+                    </option>
+                    <option value="interview" {% if user_pref and user_pref.occasion=='interview' %}selected{% endif %}>
+                        Interview</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="weather">Weather</label>
+                <select name="weather" id="weather" required>
+                    <option value="hot" {% if user_pref and user_pref.weather=='hot' %}selected{% endif %}>Hot</option>
+                    <option value="cold" {% if user_pref and user_pref.weather=='cold' %}selected{% endif %}>Cold
+                    </option>
+                    <option value="rainy" {% if user_pref and user_pref.weather=='rainy' %}selected{% endif %}>Rainy
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select name="gender" id="gender" required>
+                    <option value="male" {% if user_pref and user_pref.gender=='male' %}selected{% endif %}>Male
+                    </option>
+                    <option value="female" {% if user_pref and user_pref.gender=='female' %}selected{% endif %}>Female
+                    </option>
+                    <option value="unisex" {% if user_pref and user_pref.gender=='unisex' %}selected{% endif %}>Unisex
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="style">Preferred Style</label>
+                <select name="style" id="style" required>
+                    <option value="formal" {% if user_pref and user_pref.style=='formal' %}selected{% endif %}>Formal
+                    </option>
+                    <option value="casual" {% if user_pref and user_pref.style=='casual' %}selected{% endif %}>Casual
+                    </option>
+                    <option value="sporty" {% if user_pref and user_pref.style=='sporty' %}selected{% endif %}>Sporty
+                    </option>
+                    <option value="trendy" {% if user_pref and user_pref.style=='trendy' %}selected{% endif %}>Trendy
+                    </option>
+                    <option value="traditional" {% if user_pref and user_pref.style=='traditional' %}selected{% endif
+                        %}>Traditional</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="color">Color Preference</label>
+                <select name="color" id="color" required>
+                    <option value="black" {% if user_pref and user_pref.color=='black' %}selected{% endif %}>Black
+                    </option>
+                    <option value="white" {% if user_pref and user_pref.color=='white' %}selected{% endif %}>White
+                    </option>
+                    <option value="blue" {% if user_pref and user_pref.color=='blue' %}selected{% endif %}>Blue</option>
+                    <option value="red" {% if user_pref and user_pref.color=='red' %}selected{% endif %}>Red</option>
+                    <option value="green" {% if user_pref and user_pref.color=='green' %}selected{% endif %}>Green
+                    </option>
+                    <option value="grey" {% if user_pref and user_pref.color=='grey' %}selected{% endif %}>Grey</option>
+                    <option value="yellow" {% if user_pref and user_pref.color=='yellow' %}selected{% endif %}>Yellow
+                    </option>
+                    <option value="pink" {% if user_pref and user_pref.color=='pink' %}selected{% endif %}>Pink</option>
+                </select>
+            </div>
+
+            <button type="submit" class="cta-button">Generate Outfit</button>
+        </form>
+    </section>
+</main>
+{% endblock %}
