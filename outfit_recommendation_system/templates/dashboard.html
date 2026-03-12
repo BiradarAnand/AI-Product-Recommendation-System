@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<header class="header">
+    <h1>Your Dashboard</h1>
+    <p>User activity overview and fashion trends.</p>
+</header>
+
+<main class="dashboard" style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- Profile Sidebar -->
+    <aside class="glass-panel text-center">
+        <div class="profile-pic" style="font-size: 4rem; margin-bottom: 1rem;">👤</div>
+        <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Welcome Back</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">User Profile Analytics</p>
+
+        <div
+            style="text-align: left; background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+            <strong>Total Recommendations:</strong> 12
+        </div>
+        <div
+            style="text-align: left; background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+            <strong>Most Common Style:</strong> Casual
+        </div>
+        <div style="text-align: left; background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 12px;">
+            <strong>Most Common Color:</strong> Black
+        </div>
+    </aside>
+
+    <!-- Content Area -->
+    <section class="glass-panel">
+        <h2 style="border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Previous
+            Outfit Recommendations</h2>
+        <ul style="list-style: none;">
+            <li
+                style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 12px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Office Workwear</strong>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Formal • White • Cold Weather</p>
+                </div>
+                <span class="badge" style="background: var(--primary); color: #fff;">Saved</span>
+            </li>
+            <li
+                style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 12px; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Weekend Casuals</strong>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Casual • Blue • Hot Weather</p>
+                </div>
+                <span class="badge" style="background: var(--primary); color: #fff;">Saved</span>
+            </li>
+        </ul>
+
+        <h2
+            style="border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 1.5rem; margin-top: 2rem;">
+            Popular Fashion Trends</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 12px;">
+                <strong>Top Trend:</strong> Techwear
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Gaining popularity in Gym
+                    and Casual settings.</p>
+            </div>
+            <div style="padding: 1rem; background: rgba(0,0,0,0.03); border-radius: 12px;">
+                <strong>Color Trend:</strong> Earth Tones
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">Trending highly for Office
+                    and Interview wear.</p>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}

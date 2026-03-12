@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}About - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<header class="header">
+    <h1>About the Project</h1>
+    <p>Understanding the purpose and technologies behind our system.</p>
+</header>
+
+<main class="dashboard-single" style="display: flex; justify-content: center; width: 100%;">
+    <section class="glass-panel" style="width: 100%; max-width: 800px; padding: 3rem;">
+
+        <div style="margin-bottom: 3rem;">
+            <h2 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--primary-dark);">Project Objective</h2>
+            <p style="color: var(--text-main); line-height: 1.8; font-size: 1.1rem;">
+                The Smart Outfit Recommendation System is designed to alleviate the daily decision fatigue of choosing
+                what to wear. By intelligently analyzing user preferences regarding occasion, weather, gender, and
+                personal style, the engine curates a complete, fashionable outfit in seconds.
+            </p>
+        </div>
+
+        <div style="margin-bottom: 3rem;">
+            <h2 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--primary-dark);">AI Features</h2>
+            <ul style="list-style-position: inside; color: var(--text-main); line-height: 1.8; font-size: 1.1rem;">
+                <li>K-Nearest Neighbors Algorithm for content-based matching.</li>
+                <li>Decision Tree integration for predicting stylistic popularity.</li>
+                <li>Robust categorical feature encoding scaling across thousands of dataset items.</li>
+            </ul>
+        </div>
+
+        <div>
+            <h2 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--primary-dark);">Technologies Used</h2>
+
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1.5rem;">
+                <div style="padding: 1.5rem; background: rgba(0,0,0,0.03); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🐍</div>
+                    <h3 style="margin-bottom: 0.2rem;">Python</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Core Backend Logic</p>
+                </div>
+                <div style="padding: 1.5rem; background: rgba(0,0,0,0.03); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🧠</div>
+                    <h3 style="margin-bottom: 0.2rem;">Scikit-Learn</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Machine Learning Modeling</p>
+                </div>
+                <div style="padding: 1.5rem; background: rgba(0,0,0,0.03); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🚀</div>
+                    <h3 style="margin-bottom: 0.2rem;">FastAPI</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Asynchronous Web Server</p>
+                </div>
+                <div style="padding: 1.5rem; background: rgba(0,0,0,0.03); border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎨</div>
+                    <h3 style="margin-bottom: 0.2rem;">HTML / CSS</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Frontend Interface</p>
+                </div>
+            </div>
+        </div>
+
+    </section>
+</main>
+{% endblock %}

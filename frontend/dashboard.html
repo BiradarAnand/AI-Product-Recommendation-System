@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard – RecoAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0b0c10;
+            --card: #161821;
+            --card-hover: #1f2230;
+            --accent: #f5c518;
+            --success: #4caf7d;
+            --text: #e8eaf0;
+            --muted: #7a7f96;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* GLASSMORPHISM BACKGROUND OVERLAY */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 10% 20%, rgba(245, 197, 24, 0.05), transparent 50%),
+                radial-gradient(circle at 90% 80%, rgba(245, 197, 24, 0.03), transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ── SIDEBAR CARt ── */
+        aside {
+            width: 340px;
+            background: rgba(18, 20, 28, 0.95);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+        }
+
+        aside.open {
+            transform: translateX(0);
+        }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .cart-header h3 {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.4rem;
+            color: var(--accent);
+        }
+
+        .close-cart {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        #cartItems {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            margin-bottom: 0.8rem;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .btn-checkout {
+            background: var(--accent);
+            color: #000;
+            padding: 1rem;
+            border-radius: 12px;
+            border: none;
+            font-weight: 700;
+            font-family: 'Syne', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-checkout:hover {
+            transform: scale(1.02);
+            background: #e0b014;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        main {
+            flex: 1;
+            padding: 2rem 4rem;
+            overflow-x: hidden;
+            width: calc(100% - 340px);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .logo {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent);
+            letter-spacing: -1px;
+        }
+
+        .search-box {
+            position: relative;
+            width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn-cart {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            color: var(--text);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: 0.2s;
+        }
+
+        .btn-cart:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        h2 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .section-title span {
+            font-size: 1.5rem;
+        }
+
+        /* ── GRID SYSTEM ── */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 16px;
+            padding: 1.5rem;
+            position: relative;
+            transition: transform 0.3s, background 0.3s;
+            cursor: pointer;
+            animation: fadeUp 0.5s ease both;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            background: var(--card-hover);
+            border-color: rgba(245, 197, 24, 0.3);
+        }
+
+        /* For mock images */
+        .img-placeholder {
+            height: 160px;
+            border-radius: 12px;
+            background: linear-gradient(45deg, #1a1b24, #272a3b);
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .prod-cat {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.4rem;
+        }
+
+        .prod-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .prod-price {
+            font-family: 'Syne', sans-serif;
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 1rem;
+        }
+
+        .btn-add {
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            color: var(--text);
+            padding: 0.7rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .card:hover .btn-add {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        .loader {
+            text-align: center;
+            color: var(--muted);
+            padding: 4rem;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--success);
+            color: #fff;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 500;
+            opacity: 0;
+            transition: 0.4s;
+            z-index: 9999;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main>
+        <header>
+            <div class="logo">RecoAI</div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search products... (mock)" />
+            </div>
+            <div class="header-actions">
+                <button class="btn-cart" id="openCart">
+                    🛒 <span id="cartCount">0</span> items
+                </button>
+                <button class="btn-cart" style="border: none;" onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="section-title"><span>✦</span>
+            <h2>AI Recommendations For You</h2>
+        </div>
+        <div class="grid" id="recoGrid">
+            <div class="loader">Loading recommendations securely from AI Model...</div>
+        </div>
+
+        <div class="section-title"><span>🛍️</span>
+            <h2>All Products</h2>
+        </div>
+        <div class="grid" id="productsGrid">
+            <div class="loader">Loading catalog...</div>
+        </div>
+    </main>
+
+    <aside id="cartSidebar">
+        <div class="cart-header">
+            <h3>Your Cart</h3>
+            <button class="close-cart" id="closeCart">&times;</button>
+        </div>
+        <div id="cartItems"></div>
+        <div class="cart-total">
+            <span>Total</span>
+            <span id="cartTotalVal">$0.00</span>
+        </div>
+        <button class="btn-checkout" id="checkoutBtn">Make Payment →</button>
+    </aside>
+
+    <div class="toast" id="toast">Added to Cart!</div>
+
+    <script>
+        let cart = [];
+        const API_URL = 'http://localhost:8002';
+        const userId = localStorage.getItem('userId') || 1; // Default to 1 if missing
+
+        // DOM Elements
+        const recoGrid = document.getElementById('recoGrid');
+        const productsGrid = document.getElementById('productsGrid');
+        const cartSidebar = document.getElementById('cartSidebar');
+        const cartItemsContainer = document.getElementById('cartItems');
+        const toast = document.getElementById('toast');
+
+        // Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchProducts();
+            fetchRecommendations();
+        });
+
+        document.getElementById('openCart').addEventListener('click', () => cartSidebar.classList.add('open'));
+        document.getElementById('closeCart').addEventListener('click', () => cartSidebar.classList.remove('open'));
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Generate Card HTML matching MySQL Object Schema
+        function createProductCard(prod) {
+            const title = prod.product_name || prod.name;
+            const emoji = title.includes('Shirt') ? '👔' :
+                title.includes('Shoe') ? '👞' :
+                    title.includes('Pant') ? '👖' :
+                        title.includes('Watch') ? '⌚' : '👗';
+
+            return `
+      <div class="card">
+        <div class="img-placeholder">${emoji}</div>
+        <div class="prod-cat">${prod.category || prod.source}</div>
+        <div class="prod-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${title}</div>
+        <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 0.5rem;">${prod.brand || 'Apparel'}</div>
+        <div class="prod-price">$${prod.price.toFixed(2)}</div>
+        <button class="btn-add" onclick="addToCart('${prod.product_id}', '${title.replace(/'/g, "\\'")}', ${prod.price})">+ Add to Cart</button>
+      </div>`;
+        }
+
+        // Fetch Endpoints using the new API Port
+        async function fetchProducts() {
+            try {
+                const res = await fetch(`${API_URL}/products`);
+                const data = await res.json();
+                if (data.products && data.products.length > 0) {
+                    productsGrid.innerHTML = data.products.map(createProductCard).join('');
+                } else {
+                    productsGrid.innerHTML = '<div class="loader">Database online but no products scraped yet. Generating items into db...</div>';
+                }
+            } catch (e) {
+                productsGrid.innerHTML = '<div class="loader">Error loading products. Is the MySQL FastAPI server running?</div>';
+            }
+        }
+
+        async function fetchRecommendations() {
+            // Passing default user preference profile payload since this is the generic dashboard load
+            const prefs = {
+                occasion: "office",
+                weather: "cold",
+                gender: "male",
+                style: "formal",
+                color_preference: "black"
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/recommend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(prefs)
+                });
+
+                const data = await res.json();
+
+                // Unpack the Custom Response format (topwear, bottomwear arrays)
+                const allSuggestedProducts = [
+                    ...(data.outfit.topwear || []),
+                    ...(data.outfit.bottomwear || []),
+                    ...(data.outfit.footwear || []),
+                    ...(data.outfit.accessories || [])
+                ];
+
+                if (allSuggestedProducts.length > 0) {
+                    recoGrid.innerHTML = allSuggestedProducts.map(createProductCard).join('');
+                } else {
+                    recoGrid.innerHTML = '<div class="loader">Waiting on Machine Learning model synchronization.</div>';
+                }
+            } catch (e) {
+                recoGrid.innerHTML = '<div class="loader">Error processing recommendation.</div>';
+            }
+        }
+
+        // Cart Logic
+        window.addToCart = function (id, title, price) {
+            cart.push({ id, title, price });
+            updateCartUI();
+            showToast(`${title} added to cart!`);
+        }
+
+        function updateCartUI() {
+            document.getElementById('cartCount').textContent = cart.length;
+            let total = 0;
+            cartItemsContainer.innerHTML = cart.map((item, index) => {
+                total += item.price;
+                return `<div class="cart-item">
+                <span>${item.title}</span>
+                <span>$${item.price.toFixed(2)} <button style="background:none; border:none; color:var(--error); cursor:pointer; margin-left:10px;" onclick="removeFromCart(${index})">✕</button></span>
+              </div>`;
+            }).join('');
+
+            if (cart.length === 0) cartItemsContainer.innerHTML = '<div class="loader" style="padding:1rem;">Cart is empty</div>';
+            document.getElementById('cartTotalVal').textContent = `$${total.toFixed(2)}`;
+        }
+
+        window.removeFromCart = function (index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        // Make Payment (Checkout endpoint)
+        document.getElementById('checkoutBtn').addEventListener('click', () => {
+            if (cart.length === 0) return showToast('Cart is empty!');
+
+            const orderData = {
+                orderId: Math.floor(Math.random() * 10000),
+                userId: parseInt(userId),
+                productIds: cart.map(item => item.id),
+                totalAmount: cart.reduce((sum, item) => sum + item.price, 0),
+                status: "Processing"
+            };
+
+            const btn = document.getElementById('checkoutBtn');
+            btn.textContent = 'Processing...';
+
+            fetch(`${API_URL}/orders`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            })
+                .then(res => res.json())
+                .then(data => {
+                    cart = [];
+                    updateCartUI();
+                    cartSidebar.classList.remove('open');
+                    btn.textContent = 'Make Payment →';
+                    showToast(`Payment Successful! Order ID: ${data.orderId}`);
+                })
+                .catch(err => {
+                    alert("Payment failed!");
+                    btn.textContent = 'Make Payment →';
+                });
+        });
+
+        window.logout = function () {
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html';
+        }
+    </script>
+
+</body>
+
+</html>
