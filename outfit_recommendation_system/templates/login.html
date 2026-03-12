@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Smart Outfit Recommendation{% endblock %}
+
+{% block content %}
+<main class="dashboard-single" style="display: flex; justify-content: center;">
+    <section class="form-section glass-panel" style="width: 100%; max-width: 500px; text-align: center;">
+        <div class="auth-icon" style="font-size: 3rem; margin-bottom: 1rem;">🔐</div>
+        <h2>Secure Login Process</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">Please enter your email or phone number to receive an
+            OTP to proceed to the system.</p>
+
+        <form action="/send_otp" method="POST" id="loginForm" style="text-align: left;">
+            <div class="form-group">
+                <label for="contact_info">Email or Mobile Number</label>
+                <input type="text" name="contact_info" id="contact_info" required class="form-input"
+                    placeholder="e.g. charan@example.com">
+            </div>
+
+            <button type="submit" class="cta-button">Send OTP</button>
+        </form>
+    </section>
+</main>
+{% endblock %}
