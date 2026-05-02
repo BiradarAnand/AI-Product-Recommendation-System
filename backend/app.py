@@ -1,13 +1,45 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-import mysql.connector
 from flask import Flask, request, jsonify, send_from_directory
-import smtplib
-from email.mime.text import MIMEText
+from flask_cors import CORS
+from flask_mail import Mail, Message
+import mysql.connector
+import random
+import os
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from auto_trainer import start_auto_trainer
+from chatbot_route import chatbot_bp
+from unified_chat_route import unified_chat_bp
+load_dotenv()
+
+# ── Blueprint imports ──────────────────────────────────────────────
+from recommend_routes import recommend_bp, load_engine
+from auth_routes import auth_bp
+from data_routes import data_bp
+from occasion_engine import occasion_bp
+  
+
 app = Flask(__name__)
 CORS(app)
 
-# Database connection
+# ── Register blueprints (each ONCE) ───────────────────────────────
+app.register_blueprint(auth_bp,      url_prefix="/api/auth")
+app.register_blueprint(recommend_bp, url_prefix="/api")
+app.register_blueprint(data_bp,      url_prefix="/api")
+app.register_blueprint(occasion_bp)
+app.register_blueprint(chatbot_bp)
+app.register_blueprint(unified_chat_bp)
+# ── Load ML models at startup ─────────────────────────────────────
+load_engine()
+start_auto_trainer()  
+# ── Mail config ───────────────────────────────────────────────────
+app.config['MAIL_SERVER']   = 'smtp.gmail.com'
+app.config['MAIL_PORT']     = 587
+app.config['MAIL_USE_TLS']  = True
+app.config['MAIL_USERNAME'] = 'biradaranand025@gmail.com'
+app.config['MAIL_PASSWORD'] = 'vmwv hqel teiw lncf'
+mail = Mail(app)
+
+# ── Database connection ────────────────────────────────────────────
 db = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -15,169 +47,208 @@ db = mysql.connector.connect(
     database="myecomerce",
     port=3305
 )
-
-import random
-
-def generate_otp():
-    return str(random.randint(1000, 9999))  # 4-digit OTP
-
-
+cursor = db.cursor()
 print("Database Connected Successfully")
-@app.route('/images/<path:filename>')
-def get_image(filename):
-    return send_from_directory('images', filename)
-# Home Route
+
+# ── OTP helper ────────────────────────────────────────────────────
+def generate_otp():
+    return str(random.randint(1000, 9999))
+
+# ─────────────────────────────────────────────────────────────────
+# ROUTES
+# ─────────────────────────────────────────────────────────────────
+
 @app.route("/")
 def home():
     return "Backend is Running Successfully!"
 
-# Get all products
+@app.route("/health")
+def health():
+    return {"status": "ok"}
+
+@app.route('/images/<path:filename>')
+def get_image(filename):
+    return send_from_directory('images', filename)
+
 @app.route("/products", methods=["GET"])
 def get_products():
     cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM products")
+    cursor.execute("""
+        SELECT * FROM products
+        ORDER BY
+            CASE WHEN image_url LIKE 'http%' THEN 0 ELSE 1 END,
+            rating DESC
+    """)
     products = cursor.fetchall()
     return jsonify(products)
 
-# Add product (Admin)
 @app.route("/admin/add-product", methods=["POST"])
 def add_product():
     data = request.json
-
-    cursor = db.cursor()
-
     query = """
     INSERT INTO products
     (name, description, category, brand, price, stock, rating, reviews, image_url, created_at)
     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
     """
-
     cursor.execute(query, (
-        data["name"],
-        data["description"],
-        data["category"],
-        data["brand"],
-        data["price"],
-        data["stock"],
-        data["rating"],
-        data["reviews"],
-        data["image_url"]
+        data["name"], data["description"], data["category"],
+        data["brand"], data["price"],  data["stock"],
+        data["rating"], data["reviews"], data["image_url"]
     ))
-
     db.commit()
+    return jsonify({"status": "success", "message": "Product added successfully"})
 
-    return jsonify({
-        "status": "success",
-        "message": "Product added successfully"
-    })
-    
-def send_email_otp(receiver_email, otp):
-    sender_email = "your_email@gmail.com"
-    sender_password = "your_app_password"  # NOT normal password
 
-    subject = "Your OTP Code"
-    body = f"Your OTP is {otp}"
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = receiver_email
-
-    try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, receiver_email, msg.as_string())
-        server.quit()
-        print("OTP sent to email ✅")
-    except Exception as e:
-        print("Error sending email:", e)
-    
-
-@app.route("/send-otp", methods=["POST"])
+# ── Send OTP — Email + SMS (Twilio) ──────────────────────────────
+@app.route('/send-otp', methods=['POST'])
 def send_otp():
-    data = request.json
-    email = data.get("email")
+    try:
+        data    = request.get_json()
+        email   = data.get('email', '')
+        phone   = data.get('phone', '')
+        channel = data.get('channel', 'email')   # 'email' | 'sms' | 'both'
 
-    if not email:
-        return jsonify({"message": "Email required"}), 400
+        otp    = generate_otp()
+        expiry = datetime.now().astimezone() + timedelta(minutes=10)
 
-    otp = generate_otp()
+        # Save OTP to DB
+        cursor.execute(
+            "INSERT INTO otp_verification (email, otp, otp_expiry) VALUES (%s, %s, %s)",
+            (email, otp, expiry)
+        )
+        db.commit()
 
-    cursor = db.cursor()
+        email_sent = False
+        sms_sent   = False
 
-    # delete old OTP
-    cursor.execute("DELETE FROM otp_verification WHERE email=%s", (email,))
+        # ── Email ────────────────────────────────────────────────
+        if channel in ('email', 'both') and email:
+            try:
+                msg = Message(
+                    subject="Your OTP Code",
+                    sender=app.config['MAIL_USERNAME'],
+                    recipients=[email]
+                )
+                msg.body = f"Your OTP is: {otp}\n\nExpires in 10 minutes."
+                msg.html = f"""
+                <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;
+                            padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+                    <h2 style="color:#1f2937;">Your OTP Code</h2>
+                    <div style="font-size:40px;font-weight:bold;letter-spacing:14px;
+                                text-align:center;padding:24px;background:#f9fafb;
+                                border-radius:8px;color:#1f2937;">{otp}</div>
+                    <p style="color:#9ca3af;font-size:13px;margin-top:20px;">
+                        Expires in 10 minutes. Do not share with anyone.
+                    </p>
+                </div>"""
+                mail.send(msg)
+                email_sent = True
+                print(f"[OTP] Email sent to {email} — OTP: {otp}")
+            except Exception as e:
+                print(f"[OTP] Email failed: {e}")
 
-    # insert new OTP
-    cursor.execute(
-        "INSERT INTO otp_verification (email, otp) VALUES (%s, %s)",
-        (email, otp)
-    )
-    db.commit()
+        # ── SMS via Twilio ───────────────────────────────────────
+        if channel in ('sms', 'both') and phone:
+            try:
+                from twilio.rest import Client as TwilioClient
 
-    # 🔷 ADD THIS LINE HERE 👇
-    send_email_otp(email, otp)
+                sid         = os.getenv("TWILIO_ACCOUNT_SID", "")
+                token       = os.getenv("TWILIO_AUTH_TOKEN",  "")
+                from_number = os.getenv("TWILIO_PHONE_NUMBER","")
 
-    print("OTP:", otp)  # optional (for debug)
+                if not sid or not token or not from_number:
+                    print("[OTP] Twilio credentials missing in .env")
+                else:
+                    # Add +91 if no country code
+                    if not phone.startswith("+"):
+                        phone = "+91" + phone.lstrip("0")
 
-    return jsonify({"message": "OTP sent to your email"})
+                    client  = TwilioClient(sid, token)
+                    message = client.messages.create(
+                        body=f"Your OTP is: {otp}. Valid for 10 minutes. Do not share.",
+                        from_=from_number,
+                        to=phone
+                    )
+                    sms_sent = True
+                    print(f"[OTP] SMS sent to {phone} — SID: {message.sid}")
 
-@app.route("/verify-otp", methods=["POST"])
+            except Exception as e:
+                print(f"[OTP] SMS failed: {e}")
+
+        if not email_sent and not sms_sent:
+            return jsonify({"message": "Failed to send OTP. Check server logs."}), 500
+
+        return jsonify({
+            "message":    "OTP sent successfully",
+            "email_sent": email_sent,
+            "sms_sent":   sms_sent,
+        })
+
+    except Exception as e:
+        print(f"[OTP] Server error: {e}")
+        return jsonify({"message": f"Server error: {str(e)}"}), 500
+
+
+# ── Verify OTP ────────────────────────────────────────────────────
+@app.route('/verify-otp', methods=['POST'])
 def verify_otp():
-    data = request.json
-    email = data.get("email")
-    otp = data.get("otp")
+    data     = request.get_json()
+    email    = data.get('email')
+    user_otp = data.get('otp')
 
-    cursor = db.cursor()
-
-    cursor.execute(
-        "SELECT * FROM otp_verification WHERE email=%s AND otp=%s ORDER BY id DESC LIMIT 1",
-        (email, otp)
-    )
-
+    cursor.execute("""
+        SELECT otp, otp_expiry FROM otp_verification
+        WHERE email = %s
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (email,))
     result = cursor.fetchone()
 
     if result:
-        cursor.execute("DELETE FROM otp_verification WHERE email=%s", (email,))
-        db.commit()
-        return jsonify({"message": "OTP verified"})
-    else:
-        return jsonify({"message": "Invalid OTP"}), 400
+        db_otp, expiry = result
+        if str(db_otp) == str(user_otp) and datetime.utcnow() < expiry:
+            cursor.execute(
+                "UPDATE otp_verification SET is_verified = TRUE WHERE email = %s",
+                (email,)
+            )
+            db.commit()
+            return jsonify({"message": "OTP verified ✅"})
+
+    return jsonify({"message": "Invalid or expired OTP ❌"}), 400
 
 
-# 🔷 MOVE IT HERE (OUTSIDE)
+# ── Register ──────────────────────────────────────────────────────
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json
-
-    name = data.get("name")
-    email = data.get("email")
+    data     = request.get_json()
+    name     = data.get("name")
+    email    = data.get("email")
     password = data.get("password")
 
     if not name or not email or not password:
         return jsonify({"message": "All fields required"}), 400
 
-    cursor = db.cursor()
+    cursor.execute("""
+        SELECT is_verified FROM otp_verification
+        WHERE email = %s ORDER BY created_at DESC LIMIT 1
+    """, (email,))
+    result = cursor.fetchone()
 
-    # Check OTP (must be deleted after verification)
-    cursor.execute("SELECT * FROM otp_verification WHERE email=%s", (email,))
-    if cursor.fetchone():
-        return jsonify({"message": "Please verify OTP first"}), 400
+    if not result or not result[0]:
+        return jsonify({"message": "Please verify OTP first ❗"}), 400
 
-    # Check existing user
-    cursor.execute("SELECT * FROM users WHERE email=%s", (email,))
+    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
     if cursor.fetchone():
         return jsonify({"message": "User already exists"}), 400
 
-    # Insert user
     cursor.execute(
-        "INSERT INTO users (name, email, password, is_verified) VALUES (%s, %s, %s, %s)",
-        (name, email, password, True)
+        "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+        (name, email, password)
     )
     db.commit()
-
     return jsonify({"message": "Registered successfully ✅"})
 
+
+# ─────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     app.run(debug=True)
