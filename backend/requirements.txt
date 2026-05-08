@@ -209,7 +209,6 @@ python-multipart==0.0.20
 python-pptx==1.0.2
 python-slugify==8.0.4
 pytz==2025.2
-pywinpty==3.0.3
 pyxnat==1.6.3
 PyYAML==6.0.2
 pyzmq==27.1.0
