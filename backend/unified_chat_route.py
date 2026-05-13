@@ -36,13 +36,12 @@ unified_chat_bp = Blueprint("unified_chat", __name__)
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "127.0.0.1"),
-    "port":     int(os.getenv("DB_PORT", 3305)),
-    "user":     os.getenv("DB_USER",     "root"),
-    "password": os.getenv("DB_PASSWORD", "Passwordmysql"),
-    "database": os.getenv("DB_NAME",     "myecomerce"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
 }
-
 OCCASION_CONFIDENCE_THRESHOLD = 0.15   # tune this if needed
 
 

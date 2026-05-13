@@ -16,16 +16,16 @@ import mysql.connector
 from dotenv import load_dotenv
 
 load_dotenv()
-
 DB_CONFIG = {
-    "host":     os.getenv("DB_HOST", "localhost"),
-    "port":     int(os.getenv("DB_PORT", 3306)),
-    "user":     os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "your_db_name"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
 }
 
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
+
 
 BRANDS = {
     "Shirts":       ["Raymond","Arrow","Van Heusen","Louis Philippe","Peter England","Allen Solly","Park Avenue","Blackberrys","Wills Lifestyle","ColorPlus","United Colors of Benetton","Pepe Jeans","Flying Machine","Killer","Spykar"],

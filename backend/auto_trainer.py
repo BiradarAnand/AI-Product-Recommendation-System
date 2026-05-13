@@ -24,22 +24,24 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
-
 DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "127.0.0.1"),
-    "port":     int(os.getenv("DB_PORT", 3305)),
-    "user":     os.getenv("DB_USER",     "root"),
-    "password": os.getenv("DB_PASSWORD", "Passwordmysql"),
-    "database": os.getenv("DB_NAME",     "myecomerce"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
 }
+
+def get_db():
+    return mysql.connector.connect(**DB_CONFIG)
 
 _retrain_lock        = threading.Lock()
 _interactions_since  = 0      # count new interactions since last retrain
 RETRAIN_THRESHOLD    = 10     # retrain after this many new interactions
 
 
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
+# def get_db():
+#     return mysql.connector.connect(**DB_CONFIG)
 
 
 def run_training():

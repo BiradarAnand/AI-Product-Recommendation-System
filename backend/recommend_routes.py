@@ -26,16 +26,16 @@ _engine: HybridRecommendationEngine | None = None
 JWT_SECRET = os.getenv("JWT_SECRET", "your-jwt-secret")
 
 DB_CONFIG = {
-    "host":     os.getenv("DB_HOST",     "127.0.0.1"),
-    "port":     int(os.getenv("DB_PORT", 3305)),
-    "user":     os.getenv("DB_USER",     "root"),
-    "password": os.getenv("DB_PASSWORD", "Passwordmysql"),
-    "database": os.getenv("DB_NAME",     "myecomerce"),
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT")),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
+    "database": os.getenv("DB_NAME"),
 }
 
 
 # ─────────────────────────────────────────────
-# ENGINE LOADER  (call at app startup)
+# ENGINE LOADER  (call at app startup)DF
 # ─────────────────────────────────────────────
 def load_engine():
     global _engine

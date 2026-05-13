@@ -16,15 +16,16 @@ from datetime import datetime
 chatbot_bp = Blueprint("chatbot", __name__)
 
 # ── Groq client ───────────────────────────────────────────────────────────────
-groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))  # set in .env
-
+groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))  
+# set in .env
 # ── DB helper ─────────────────────────────────────────────────────────────────
 def get_db():
     return mysql.connector.connect(
-        host=os.environ.get("DB_HOST", "localhost"),
-        user=os.environ.get("DB_USER", "root"),
-        password=os.environ.get("DB_PASSWORD", ""),
-        database=os.environ.get("DB_NAME", "ecommerce_db"),
+        host=os.environ.get("DB_HOST"),
+        port=int(os.environ.get("DB_PORT")),
+        user=os.environ.get("DB_USER"),
+        password=os.environ.get("DB_PASSWORD"),
+        database=os.environ.get("DB_NAME"),
     )
 
 
