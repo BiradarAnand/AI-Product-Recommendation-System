@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_mail import Mail, Message
 import mysql.connector
+from mysql.connector import pooling
 import random
 import os
 from datetime import datetime, timedelta
@@ -16,21 +17,23 @@ from recommend_routes import recommend_bp, load_engine
 from auth_routes import auth_bp
 from data_routes import data_bp
 from occasion_engine import occasion_bp
-  
+
 
 app = Flask(__name__)
 CORS(app)
 
 # ── Register blueprints (each ONCE) ───────────────────────────────
-app.register_blueprint(auth_bp,      url_prefix="/api/auth")
-app.register_blueprint(recommend_bp, url_prefix="/api")
-app.register_blueprint(data_bp,      url_prefix="/api")
+app.register_blueprint(auth_bp,        url_prefix="/api/auth")
+app.register_blueprint(recommend_bp,   url_prefix="/api")
+app.register_blueprint(data_bp,        url_prefix="/api")
 app.register_blueprint(occasion_bp)
 app.register_blueprint(chatbot_bp)
 app.register_blueprint(unified_chat_bp)
+
 # ── Load ML models at startup ─────────────────────────────────────
 load_engine()
-start_auto_trainer()  
+start_auto_trainer()
+
 # ── Mail config ───────────────────────────────────────────────────
 app.config['MAIL_SERVER']   = 'smtp.gmail.com'
 app.config['MAIL_PORT']     = 587
@@ -39,20 +42,31 @@ app.config['MAIL_USERNAME'] = 'biradaranand025@gmail.com'
 app.config['MAIL_PASSWORD'] = 'vmwv hqel teiw lncf'
 mail = Mail(app)
 
-# ── Database connection ────────────────────────────────────────────
-db = mysql.connector.connect(
+# ── Connection Pool (shared across all Gunicorn workers) ───────────
+#    pool_size × gunicorn workers must stay ≤ your DB max_user_connections (5)
+#    Recommended: 2 workers × pool_size=2  →  4 total connections (safe)
+db_pool = pooling.MySQLConnectionPool(
+    pool_name="mypool",
+    pool_size=2,
+    pool_reset_session=True,
     host=os.environ.get("DB_HOST"),
     user=os.environ.get("DB_USER"),
     password=os.environ.get("DB_PASSWORD"),
     database=os.environ.get("DB_NAME"),
-    port=int(os.environ.get("DB_PORT", 3305))
+    port=int(os.environ.get("DB_PORT", 3306))
 )
-cursor = db.cursor()
-print("Database Connected Successfully")
+print("Database Connection Pool Created Successfully")
+
+
+def get_db():
+    """Borrow a connection from the pool. Always call conn.close() when done."""
+    return db_pool.get_connection()
+
 
 # ── OTP helper ────────────────────────────────────────────────────
 def generate_otp():
     return str(random.randint(1000, 9999))
+
 
 # ─────────────────────────────────────────────────────────────────
 # ROUTES
@@ -70,33 +84,46 @@ def health():
 def get_image(filename):
     return send_from_directory('images', filename)
 
+
 @app.route("/products", methods=["GET"])
 def get_products():
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT * FROM products
-        ORDER BY
-            CASE WHEN image_url LIKE 'http%' THEN 0 ELSE 1 END,
-            rating DESC
-    """)
-    products = cursor.fetchall()
-    return jsonify(products)
+    conn = get_db()
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT * FROM products
+            ORDER BY
+                CASE WHEN image_url LIKE 'http%' THEN 0 ELSE 1 END,
+                rating DESC
+        """)
+        products = cursor.fetchall()
+        return jsonify(products)
+    finally:
+        cursor.close()
+        conn.close()  # Returns connection to pool
+
 
 @app.route("/admin/add-product", methods=["POST"])
 def add_product():
     data = request.json
-    query = """
-    INSERT INTO products
-    (name, description, category, brand, price, stock, rating, reviews, image_url, created_at)
-    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
-    """
-    cursor.execute(query, (
-        data["name"], data["description"], data["category"],
-        data["brand"], data["price"],  data["stock"],
-        data["rating"], data["reviews"], data["image_url"]
-    ))
-    db.commit()
-    return jsonify({"status": "success", "message": "Product added successfully"})
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        query = """
+        INSERT INTO products
+        (name, description, category, brand, price, stock, rating, reviews, image_url, created_at)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW())
+        """
+        cursor.execute(query, (
+            data["name"], data["description"], data["category"],
+            data["brand"], data["price"],  data["stock"],
+            data["rating"], data["reviews"], data["image_url"]
+        ))
+        conn.commit()
+        return jsonify({"status": "success", "message": "Product added successfully"})
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # ── Send OTP — Email + SMS (Twilio) ──────────────────────────────
@@ -112,11 +139,17 @@ def send_otp():
         expiry = datetime.now().astimezone() + timedelta(minutes=10)
 
         # Save OTP to DB
-        cursor.execute(
-            "INSERT INTO otp_verification (email, otp, otp_expiry) VALUES (%s, %s, %s)",
-            (email, otp, expiry)
-        )
-        db.commit()
+        conn = get_db()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO otp_verification (email, otp, otp_expiry) VALUES (%s, %s, %s)",
+                (email, otp, expiry)
+            )
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
 
         email_sent = False
         sms_sent   = False
@@ -159,7 +192,6 @@ def send_otp():
                 if not sid or not token or not from_number:
                     print("[OTP] Twilio credentials missing in .env")
                 else:
-                    # Add +91 if no country code
                     if not phone.startswith("+"):
                         phone = "+91" + phone.lstrip("0")
 
@@ -196,25 +228,31 @@ def verify_otp():
     email    = data.get('email')
     user_otp = data.get('otp')
 
-    cursor.execute("""
-        SELECT otp, otp_expiry FROM otp_verification
-        WHERE email = %s
-        ORDER BY created_at DESC
-        LIMIT 1
-    """, (email,))
-    result = cursor.fetchone()
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT otp, otp_expiry FROM otp_verification
+            WHERE email = %s
+            ORDER BY created_at DESC
+            LIMIT 1
+        """, (email,))
+        result = cursor.fetchone()
 
-    if result:
-        db_otp, expiry = result
-        if str(db_otp) == str(user_otp) and datetime.utcnow() < expiry:
-            cursor.execute(
-                "UPDATE otp_verification SET is_verified = TRUE WHERE email = %s",
-                (email,)
-            )
-            db.commit()
-            return jsonify({"message": "OTP verified ✅"})
+        if result:
+            db_otp, expiry = result
+            if str(db_otp) == str(user_otp) and datetime.utcnow() < expiry:
+                cursor.execute(
+                    "UPDATE otp_verification SET is_verified = TRUE WHERE email = %s",
+                    (email,)
+                )
+                conn.commit()
+                return jsonify({"message": "OTP verified ✅"})
 
-    return jsonify({"message": "Invalid or expired OTP ❌"}), 400
+        return jsonify({"message": "Invalid or expired OTP ❌"}), 400
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # ── Register ──────────────────────────────────────────────────────
@@ -228,32 +266,35 @@ def register():
     if not name or not email or not password:
         return jsonify({"message": "All fields required"}), 400
 
-    cursor.execute("""
-        SELECT is_verified FROM otp_verification
-        WHERE email = %s ORDER BY created_at DESC LIMIT 1
-    """, (email,))
-    result = cursor.fetchone()
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
 
-    if not result or not result[0]:
-        return jsonify({"message": "Please verify OTP first ❗"}), 400
+        cursor.execute("""
+            SELECT is_verified FROM otp_verification
+            WHERE email = %s ORDER BY created_at DESC LIMIT 1
+        """, (email,))
+        result = cursor.fetchone()
 
-    cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-    if cursor.fetchone():
-        return jsonify({"message": "User already exists"}), 400
+        if not result or not result[0]:
+            return jsonify({"message": "Please verify OTP first ❗"}), 400
 
-    cursor.execute(
-        "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
-        (name, email, password)
-    )
-    db.commit()
-    return jsonify({"message": "Registered successfully ✅"})
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            return jsonify({"message": "User already exists"}), 400
+
+        cursor.execute(
+            "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+            (name, email, password)
+        )
+        conn.commit()
+        return jsonify({"message": "Registered successfully ✅"})
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # ─────────────────────────────────────────────────────────────────
-# if __name__ == "__main__":
-#     app.run(debug=True)
-    
-import os
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
