@@ -1,38 +1,21 @@
 # occasion_engine.py  — v2 — Content-Based TF-IDF Cosine Similarity
-# ─────────────────────────────────────────────────────────────────────
-# Key improvement over v1:
-#   • Fetches candidate products from DB by category + budget (simple SQL)
-#   • Re-ranks them using the *trained* TF-IDF content model via cosine
-#     similarity against a rich occasion / slot purpose query
-#   • Final score = 0.50*cosine + 0.20*category_priority +
-#                   0.20*rating_norm + 0.10*review_norm
-#   • Falls back cleanly to SQL-only scoring if model not yet trained
-# ─────────────────────────────────────────────────────────────────────
 
 import os
 import pickle
 import numpy as np
 from flask import Blueprint, request, jsonify
-import mysql.connector
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 from occasion_nlp import classify_occasion, OCCASION_LABELS, OCCASION_ICONS
+from db import get_db
 
 load_dotenv()
 
 occasion_bp = Blueprint("occasion", __name__)
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
 
 MODEL_DIR = "models"
 
-# ── Rich purpose queries — fed into TF-IDF vectorizer ────────────────
-# More descriptive = better cosine separation between occasions
+# ── Rich purpose queries ──────────────────────────────────────────────
 OCCASION_PURPOSE_QUERIES = {
     "job_interview": (
         "formal professional office business shirt trouser blazer formal shoes "
@@ -84,7 +67,6 @@ OCCASION_PURPOSE_QUERIES = {
     ),
 }
 
-# Per-slot queries for the curated 4-piece outfit
 SLOT_PURPOSE_QUERIES = {
     "job_interview": {
         "shirt": "formal cotton shirt office business professional slim regular solid striped classic",
@@ -136,7 +118,6 @@ SLOT_PURPOSE_QUERIES = {
     },
 }
 
-# ── Category / budget config ──────────────────────────────────────────
 OCCASION_CATEGORIES = {
     "job_interview": {
         "primary":   ["Shirts", "Trousers", "Formal Shoes"],
@@ -254,7 +235,6 @@ LOW_CONF_REPLY = (
 _content_model = None
 
 def _load_content_model():
-    """Load the trained TF-IDF content model (lazy, cached)."""
     global _content_model
     if _content_model is not None:
         return _content_model
@@ -272,9 +252,7 @@ def _load_content_model():
         return None
 
 
-# ── Helper: build searchable text from a DB dict row ─────────────────
 def _row_to_text(row: dict) -> str:
-    """Mirror of recommendation_engine._build_product_text for dict rows."""
     name        = str(row.get("name", ""))
     category    = str(row.get("category", ""))
     brand       = str(row.get("brand", ""))
@@ -283,7 +261,6 @@ def _row_to_text(row: dict) -> str:
     return " ".join(p for p in parts if p and p.strip() and p.lower() != "nan").lower()
 
 
-# ── Helper: min-max normalise a numpy array ───────────────────────────
 def _norm(arr: np.ndarray) -> np.ndarray:
     mn, mx = arr.min(), arr.max()
     if mx - mn < 1e-9:
@@ -291,81 +268,69 @@ def _norm(arr: np.ndarray) -> np.ndarray:
     return (arr - mn) / (mx - mn)
 
 
-# ── Core: cosine re-rank a list of DB rows ────────────────────────────
-def _cosine_rerank(rows: list[dict], purpose_query: str,
-                   primary_cats: list[str],
-                   w_cosine=0.50, w_cat=0.20, w_rating=0.20, w_review=0.10) -> list[dict]:
-    """
-    Re-rank `rows` using TF-IDF cosine similarity against `purpose_query`.
-
-    Final score = w_cosine*cosine + w_cat*category_priority
-                + w_rating*rating_norm + w_review*review_norm
-
-    Falls back to a simpler rating+popularity sort if the model is unavailable.
-    """
+def _cosine_rerank(rows: list, purpose_query: str,
+                   primary_cats: list,
+                   w_cosine=0.50, w_cat=0.20, w_rating=0.20, w_review=0.10) -> list:
     if not rows:
         return rows
 
     model = _load_content_model()
     n     = len(rows)
 
-    # ── Rating and review normalisation (always available) ──
     ratings  = np.array([float(r.get("rating", 0) or 0)  for r in rows])
     reviews  = np.log1p(np.array([float(r.get("reviews", 0) or 0) for r in rows]))
     r_norm   = _norm(ratings)
     rv_norm  = _norm(reviews)
 
-    # ── Category priority score ──
     primary_set = {c.lower() for c in primary_cats}
     cat_score   = np.array([
         1.0 if str(r.get("category", "")).lower() in primary_set else 0.4
         for r in rows
     ])
 
-    # ── Cosine similarity ──
     if model is not None:
         try:
-            texts       = [_row_to_text(r) for r in rows]
-            prod_vecs   = model.vectorizer.transform(texts)
-            query_vec   = model.vectorizer.transform([purpose_query.lower()])
-            sims        = cosine_similarity(query_vec, prod_vecs).flatten()
-            cos_norm    = _norm(sims)
+            texts     = [_row_to_text(r) for r in rows]
+            prod_vecs = model.vectorizer.transform(texts)
+            query_vec = model.vectorizer.transform([purpose_query.lower()])
+            sims      = cosine_similarity(query_vec, prod_vecs).flatten()
+            cos_norm  = _norm(sims)
         except Exception as e:
             print(f"[OccasionEngine] cosine error: {e}")
             cos_norm = np.zeros(n)
     else:
-        # No model — give equal weight; category + rating will drive ranking
-        cos_norm = np.zeros(n)
-        w_rating = w_rating + w_cosine * 0.6
-        w_review = w_review + w_cosine * 0.4
-        w_cosine = 0.0
+        cos_norm  = np.zeros(n)
+        w_rating  = w_rating + w_cosine * 0.6
+        w_review  = w_review + w_cosine * 0.4
+        w_cosine  = 0.0
 
     final = (w_cosine * cos_norm + w_cat * cat_score +
              w_rating * r_norm   + w_review * rv_norm)
 
     for i, row in enumerate(rows):
-        row["cosine_score"]  = round(float(cos_norm[i]), 4) if model else 0.0
+        row["cosine_score"]   = round(float(cos_norm[i]), 4) if model else 0.0
         row["occasion_score"] = round(float(final[i]),   4)
-        row["match_pct"]     = int(round(float(cos_norm[i]) * 100)) if model else None
+        row["match_pct"]      = int(round(float(cos_norm[i]) * 100)) if model else None
 
     rows.sort(key=lambda x: x["occasion_score"], reverse=True)
     return rows
 
 
 # ── DB helpers ────────────────────────────────────────────────────────
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
-
 
 def get_user_preferences(user_id):
     if not user_id:
         return {}
     try:
-        db  = get_db()
-        cur = db.cursor(dictionary=True)
-        cur.execute("SELECT * FROM user_preferences WHERE user_id = %s", (user_id,))
-        row = cur.fetchone()
-        db.close()
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+        try:
+            cur.execute("SELECT * FROM user_preferences WHERE user_id = %s", (user_id,))
+            row = cur.fetchone()
+        finally:
+            cur.close()
+            conn.close()
+
         if not row:
             return {}
         row["preferred_categories_list"] = [
@@ -382,34 +347,34 @@ def get_user_preferences(user_id):
         return {}
 
 
-def _fetch_candidates(categories: list[str], min_p: float, max_p: float,
-                      brand_filter: str = "") -> list[dict]:
-    """
-    Simple SQL fetch: get up to 200 in-stock products from the given
-    categories within the budget. No keyword scoring — cosine will rank.
-    """
+def _fetch_candidates(categories: list, min_p: float, max_p: float,
+                      brand_filter: str = "") -> list:
     if not categories:
         return []
     try:
-        db  = get_db()
-        cur = db.cursor(dictionary=True)
-        cat_ph = ",".join(["%s"] * len(categories))
-        brand_clause = "AND p.brand = %s" if brand_filter else ""
-        query = f"""
-            SELECT p.id, p.name, p.description, p.category,
-                   p.price, p.rating, p.reviews, p.image_url, p.brand
-            FROM products p
-            WHERE p.category IN ({cat_ph})
-              AND p.price BETWEEN %s AND %s
-              AND p.stock > 0
-              {brand_clause}
-            ORDER BY p.rating DESC, p.reviews DESC
-            LIMIT 200
-        """
-        params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
-        cur.execute(query, params)
-        rows = cur.fetchall()
-        db.close()
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+        try:
+            cat_ph       = ",".join(["%s"] * len(categories))
+            brand_clause = "AND p.brand = %s" if brand_filter else ""
+            query = f"""
+                SELECT p.id, p.name, p.description, p.category,
+                       p.price, p.rating, p.reviews, p.image_url, p.brand
+                FROM products p
+                WHERE p.category IN ({cat_ph})
+                  AND p.price BETWEEN %s AND %s
+                  AND p.stock > 0
+                  {brand_clause}
+                ORDER BY p.rating DESC, p.reviews DESC
+                LIMIT 200
+            """
+            params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
+            cur.execute(query, params)
+            rows = cur.fetchall()
+        finally:
+            cur.close()
+            conn.close()
+
         for row in rows:
             row["price"]   = float(row["price"]  or 0)
             row["rating"]  = float(row["rating"] or 0)
@@ -421,18 +386,17 @@ def _fetch_candidates(categories: list[str], min_p: float, max_p: float,
         return []
 
 
-# ── Public: fetch broad product grid for an occasion ─────────────────
-def fetch_occasion_products(occasion_key: str, prefs: dict, refinements: dict) -> list[dict]:
-    cfg        = OCCASION_CATEGORIES.get(occasion_key, {})
-    primary    = cfg.get("primary",   [])
-    secondary  = cfg.get("secondary", [])
-    all_cats   = list(dict.fromkeys(primary + secondary))
+def fetch_occasion_products(occasion_key: str, prefs: dict, refinements: dict) -> list:
+    cfg       = OCCASION_CATEGORIES.get(occasion_key, {})
+    primary   = cfg.get("primary",   [])
+    secondary = cfg.get("secondary", [])
+    all_cats  = list(dict.fromkeys(primary + secondary))
 
-    budget_key = (refinements.get("budget")
-                  or (prefs.get("budget_range") if prefs else None)
-                  or "mid")
-    min_p, max_p  = BUDGET_RANGES.get(budget_key, (0, 999999))
-    brand_filter  = refinements.get("brand", "")
+    budget_key   = (refinements.get("budget")
+                    or (prefs.get("budget_range") if prefs else None)
+                    or "mid")
+    min_p, max_p = BUDGET_RANGES.get(budget_key, (0, 999999))
+    brand_filter = refinements.get("brand", "")
 
     candidates = _fetch_candidates(all_cats, min_p, max_p, brand_filter)
     if not candidates:
@@ -441,7 +405,6 @@ def fetch_occasion_products(occasion_key: str, prefs: dict, refinements: dict) -
     purpose_query = OCCASION_PURPOSE_QUERIES.get(occasion_key, occasion_key)
     ranked = _cosine_rerank(candidates, purpose_query, primary)
 
-    # Apply user preference soft-boost
     if prefs:
         user_cats = prefs.get("preferred_categories_list", [])
         for p in ranked:
@@ -453,9 +416,8 @@ def fetch_occasion_products(occasion_key: str, prefs: dict, refinements: dict) -
     return ranked
 
 
-# ── Public: fetch curated 4-piece outfit ─────────────────────────────
 def fetch_outfit_set(occasion_key: str, prefs: dict, refinements: dict) -> dict:
-    slots = OUTFIT_SLOTS.get(occasion_key, {})
+    slots        = OUTFIT_SLOTS.get(occasion_key, {})
     slot_queries = SLOT_PURPOSE_QUERIES.get(occasion_key, {})
 
     budget_key   = (refinements.get("budget")
@@ -469,9 +431,9 @@ def fetch_outfit_set(occasion_key: str, prefs: dict, refinements: dict) -> dict:
         candidates = _fetch_candidates(cats, min_p, max_p, brand_filter)
         if not candidates:
             continue
-        slot_q   = slot_queries.get(slot_name, OCCASION_PURPOSE_QUERIES.get(occasion_key, ""))
-        ranked   = _cosine_rerank(candidates, slot_q, cats)
-        best     = ranked[0] if ranked else None
+        slot_q = slot_queries.get(slot_name, OCCASION_PURPOSE_QUERIES.get(occasion_key, ""))
+        ranked = _cosine_rerank(candidates, slot_q, cats)
+        best   = ranked[0] if ranked else None
         if best:
             best["slot"]       = slot_name
             best["slot_label"] = SLOT_LABELS[slot_name]
@@ -531,8 +493,6 @@ def occasion_chat():
             "reply":    f"Hmm, I couldn't find matching products for {OCCASION_LABELS[occasion]} right now. Try adjusting your budget.",
         })
 
-    top12 = products[:12]
-
     return jsonify({
         "type":     "products",
         "occasion": occasion,
@@ -540,7 +500,7 @@ def occasion_chat():
         "icon":     OCCASION_ICONS[occasion],
         "reply":    CHATBOT_REPLIES[occasion],
         "outfit":   outfit,
-        "products": top12,
+        "products": products[:12],
         "total":    len(products),
         "nlp": {
             "confidence":   confidence,

@@ -1,8 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_mail import Mail, Message
-import mysql.connector
-from mysql.connector import pooling
 import random
 import os
 from datetime import datetime, timedelta
@@ -10,6 +8,7 @@ from dotenv import load_dotenv
 from auto_trainer import start_auto_trainer
 from chatbot_route import chatbot_bp
 from unified_chat_route import unified_chat_bp
+from db import get_db  # ← single shared pool
 load_dotenv()
 
 # ── Blueprint imports ──────────────────────────────────────────────
@@ -18,11 +17,10 @@ from auth_routes import auth_bp
 from data_routes import data_bp
 from occasion_engine import occasion_bp
 
-
 app = Flask(__name__)
 CORS(app)
 
-# ── Register blueprints (each ONCE) ───────────────────────────────
+# ── Register blueprints ───────────────────────────────────────────
 app.register_blueprint(auth_bp,        url_prefix="/api/auth")
 app.register_blueprint(recommend_bp,   url_prefix="/api")
 app.register_blueprint(data_bp,        url_prefix="/api")
@@ -39,28 +37,10 @@ app.config['MAIL_SERVER']   = 'smtp.gmail.com'
 app.config['MAIL_PORT']     = 587
 app.config['MAIL_USE_TLS']  = True
 app.config['MAIL_USERNAME'] = 'biradaranand025@gmail.com'
-app.config['MAIL_PASSWORD'] = 'vmwv hqel teiw lncf'
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'vmwv hqel teiw lncf')
 mail = Mail(app)
 
-# ── Connection Pool (shared across all Gunicorn workers) ───────────
-#    pool_size × gunicorn workers must stay ≤ your DB max_user_connections (5)
-#    Recommended: 2 workers × pool_size=2  →  4 total connections (safe)
-db_pool = pooling.MySQLConnectionPool(
-    pool_name="mypool",
-    pool_size=2,
-    pool_reset_session=True,
-    host=os.environ.get("DB_HOST"),
-    user=os.environ.get("DB_USER"),
-    password=os.environ.get("DB_PASSWORD"),
-    database=os.environ.get("DB_NAME"),
-    port=int(os.environ.get("DB_PORT", 3306))
-)
-print("Database Connection Pool Created Successfully")
-
-
-def get_db():
-    """Borrow a connection from the pool. Always call conn.close() when done."""
-    return db_pool.get_connection()
+print("App started — using shared DB connection pool from db.py")
 
 
 # ── OTP helper ────────────────────────────────────────────────────
@@ -100,7 +80,7 @@ def get_products():
         return jsonify(products)
     finally:
         cursor.close()
-        conn.close()  # Returns connection to pool
+        conn.close()
 
 
 @app.route("/admin/add-product", methods=["POST"])
@@ -126,19 +106,17 @@ def add_product():
         conn.close()
 
 
-# ── Send OTP — Email + SMS (Twilio) ──────────────────────────────
 @app.route('/send-otp', methods=['POST'])
 def send_otp():
     try:
         data    = request.get_json()
         email   = data.get('email', '')
         phone   = data.get('phone', '')
-        channel = data.get('channel', 'email')   # 'email' | 'sms' | 'both'
+        channel = data.get('channel', 'email')
 
         otp    = generate_otp()
         expiry = datetime.now().astimezone() + timedelta(minutes=10)
 
-        # Save OTP to DB
         conn = get_db()
         try:
             cursor = conn.cursor()
@@ -154,7 +132,6 @@ def send_otp():
         email_sent = False
         sms_sent   = False
 
-        # ── Email ────────────────────────────────────────────────
         if channel in ('email', 'both') and email:
             try:
                 msg = Message(
@@ -180,11 +157,9 @@ def send_otp():
             except Exception as e:
                 print(f"[OTP] Email failed: {e}")
 
-        # ── SMS via Twilio ───────────────────────────────────────
         if channel in ('sms', 'both') and phone:
             try:
                 from twilio.rest import Client as TwilioClient
-
                 sid         = os.getenv("TWILIO_ACCOUNT_SID", "")
                 token       = os.getenv("TWILIO_AUTH_TOKEN",  "")
                 from_number = os.getenv("TWILIO_PHONE_NUMBER","")
@@ -194,7 +169,6 @@ def send_otp():
                 else:
                     if not phone.startswith("+"):
                         phone = "+91" + phone.lstrip("0")
-
                     client  = TwilioClient(sid, token)
                     message = client.messages.create(
                         body=f"Your OTP is: {otp}. Valid for 10 minutes. Do not share.",
@@ -203,7 +177,6 @@ def send_otp():
                     )
                     sms_sent = True
                     print(f"[OTP] SMS sent to {phone} — SID: {message.sid}")
-
             except Exception as e:
                 print(f"[OTP] SMS failed: {e}")
 
@@ -221,7 +194,6 @@ def send_otp():
         return jsonify({"message": f"Server error: {str(e)}"}), 500
 
 
-# ── Verify OTP ────────────────────────────────────────────────────
 @app.route('/verify-otp', methods=['POST'])
 def verify_otp():
     data     = request.get_json()
@@ -233,9 +205,7 @@ def verify_otp():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT otp, otp_expiry FROM otp_verification
-            WHERE email = %s
-            ORDER BY created_at DESC
-            LIMIT 1
+            WHERE email = %s ORDER BY created_at DESC LIMIT 1
         """, (email,))
         result = cursor.fetchone()
 
@@ -255,7 +225,6 @@ def verify_otp():
         conn.close()
 
 
-# ── Register ──────────────────────────────────────────────────────
 @app.route("/register", methods=["POST"])
 def register():
     data     = request.get_json()
@@ -269,7 +238,6 @@ def register():
     conn = get_db()
     try:
         cursor = conn.cursor()
-
         cursor.execute("""
             SELECT is_verified FROM otp_verification
             WHERE email = %s ORDER BY created_at DESC LIMIT 1
@@ -293,8 +261,6 @@ def register():
         cursor.close()
         conn.close()
 
-
-# ─────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

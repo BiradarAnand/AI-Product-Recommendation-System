@@ -2,46 +2,22 @@
 auto_trainer.py
 ────────────────
 Automatically retrains ML models in the background.
-No need to run train_models.py manually ever again.
-
-Add to app.py:
-    from auto_trainer import start_auto_trainer
-    start_auto_trainer()   ← call once after load_engine()
-
-Retraining happens:
-  - Every night at 2 AM automatically
-  - Immediately when a user adds to cart/wishlist (after 10 interactions)
-  - On demand via POST /api/admin/retrain
 """
 
 import threading
 import time
 import os
 import schedule
-import mysql.connector
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
+from db import get_db
 
 load_dotenv()
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
 
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
-
-_retrain_lock        = threading.Lock()
-_interactions_since  = 0      # count new interactions since last retrain
-RETRAIN_THRESHOLD    = 10     # retrain after this many new interactions
-
-
-# def get_db():
-#     return mysql.connector.connect(**DB_CONFIG)
+_retrain_lock       = threading.Lock()
+_interactions_since = 0
+RETRAIN_THRESHOLD   = 10
 
 
 def run_training():
@@ -59,54 +35,53 @@ def run_training():
 
         conn = get_db()
         cur  = conn.cursor(dictionary=True)
-
-        # Load products
-        cur.execute("""
-            SELECT id, name, category, brand, price,
-                   rating, image_url, description,
-                   COALESCE(stock, 0)   AS stock,
-                   COALESCE(reviews, 0) AS reviews
-            FROM products
-        """)
-        rows = cur.fetchall()
-        products_df = pd.DataFrame(rows)
-
-        # Clean \r from text columns
-        for col in products_df.select_dtypes(include="object").columns:
-            products_df[col] = products_df[col].astype(str)\
-                .str.replace("\r", "", regex=False)\
-                .str.replace("\n", " ", regex=False)\
-                .str.strip()
-
-        # Load interactions
-        dfs = []
-        try:
-            cur.execute("SELECT user_id, product_id, 3 AS weight FROM wishlist")
-            rows = cur.fetchall()
-            if rows: dfs.append(pd.DataFrame(rows))
-        except: pass
-
-        try:
-            cur.execute("SELECT user_id, product_id, 5 AS weight FROM cart")
-            rows = cur.fetchall()
-            if rows: dfs.append(pd.DataFrame(rows))
-        except: pass
-
         try:
             cur.execute("""
-                SELECT sh.user_id, p.id AS product_id, 1 AS weight
-                FROM search_history sh
-                JOIN products p
-                  ON LOWER(p.name)     LIKE CONCAT('%', LOWER(sh.search_query), '%')
-                  OR LOWER(p.category) LIKE CONCAT('%', LOWER(sh.search_query), '%')
-                LIMIT 50000
+                SELECT id, name, category, brand, price,
+                       rating, image_url, description,
+                       COALESCE(stock, 0)   AS stock,
+                       COALESCE(reviews, 0) AS reviews
+                FROM products
             """)
             rows = cur.fetchall()
-            if rows: dfs.append(pd.DataFrame(rows))
-        except: pass
+            products_df = pd.DataFrame(rows)
 
-        cur.close()
-        conn.close()
+            for col in products_df.select_dtypes(include="object").columns:
+                products_df[col] = (
+                    products_df[col].astype(str)
+                    .str.replace("\r", "", regex=False)
+                    .str.replace("\n", " ", regex=False)
+                    .str.strip()
+                )
+
+            dfs = []
+            try:
+                cur.execute("SELECT user_id, product_id, 3 AS weight FROM wishlist")
+                rows = cur.fetchall()
+                if rows: dfs.append(pd.DataFrame(rows))
+            except: pass
+
+            try:
+                cur.execute("SELECT user_id, product_id, 5 AS weight FROM cart")
+                rows = cur.fetchall()
+                if rows: dfs.append(pd.DataFrame(rows))
+            except: pass
+
+            try:
+                cur.execute("""
+                    SELECT sh.user_id, p.id AS product_id, 1 AS weight
+                    FROM search_history sh
+                    JOIN products p
+                      ON LOWER(p.name)     LIKE CONCAT('%', LOWER(sh.search_query), '%')
+                      OR LOWER(p.category) LIKE CONCAT('%', LOWER(sh.search_query), '%')
+                    LIMIT 50000
+                """)
+                rows = cur.fetchall()
+                if rows: dfs.append(pd.DataFrame(rows))
+            except: pass
+        finally:
+            cur.close()
+            conn.close()
 
         interactions_df = (
             pd.concat(dfs, ignore_index=True)
@@ -115,18 +90,16 @@ def run_training():
 
         print(f"[AutoTrainer] {len(products_df)} products, {len(interactions_df)} interactions")
 
-        # Train and save
         engine = HybridRecommendationEngine()
         engine.train(products_df, interactions_df)
         engine.save()
 
-        # Reload the running engine in recommend_routes
         import recommend_routes
         recommend_routes._engine = HybridRecommendationEngine()
         recommend_routes._engine.load()
 
         _interactions_since = 0
-        print(f"[AutoTrainer] Retrain complete ✓")
+        print("[AutoTrainer] Retrain complete ✓")
 
     except Exception as e:
         print(f"[AutoTrainer] Retrain failed: {e}")
@@ -136,38 +109,23 @@ def run_training():
 
 
 def notify_new_interaction():
-    """
-    Call this from cart/wishlist routes after a user adds an item.
-    Triggers retrain after RETRAIN_THRESHOLD new interactions.
-    """
+    """Call from cart/wishlist routes after a user adds an item."""
     global _interactions_since
     _interactions_since += 1
     print(f"[AutoTrainer] New interaction ({_interactions_since}/{RETRAIN_THRESHOLD})")
 
     if _interactions_since >= RETRAIN_THRESHOLD:
         print("[AutoTrainer] Threshold reached — retraining in background...")
-        thread = threading.Thread(target=run_training, daemon=True)
-        thread.start()
+        threading.Thread(target=run_training, daemon=True).start()
 
 
 def _run_schedule():
-    """Background thread that runs the schedule."""
     while True:
         schedule.run_pending()
         time.sleep(60)
 
 
 def start_auto_trainer():
-    """
-    Call this once in app.py after load_engine().
-    Sets up:
-      - Nightly retrain at 2:00 AM
-      - Background schedule thread
-    """
-    # Schedule nightly retrain at 2 AM
     schedule.every().day.at("02:00").do(run_training)
-
-    # Start background thread
-    thread = threading.Thread(target=_run_schedule, daemon=True)
-    thread.start()
+    threading.Thread(target=_run_schedule, daemon=True).start()
     print("[AutoTrainer] Started — retrains nightly at 2 AM + after every 20 interactions")

@@ -5,8 +5,6 @@
 #    • General product queries → Groq filter extract + MySQL + Groq reply
 #
 #  POST /api/chat/unified
-#  Request  : { message, history, refinements, user_id (optional) }
-#  Response : { type, reply, products, outfit, occasion, filters_used, nlp }
 # ─────────────────────────────────────────────────────────────────────
 
 import os
@@ -15,72 +13,60 @@ import re
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
-import mysql.connector
 from groq import Groq
 from dotenv import load_dotenv
+from db import get_db
 
-# ── import your existing occasion modules ─────────────────────────────
 from occasion_nlp    import classify_occasion, OCCASION_LABELS, OCCASION_ICONS
 from occasion_engine import (
     fetch_outfit_set,
     fetch_occasion_products,
     get_user_preferences,
     CHATBOT_REPLIES,
+    OCCASION_CATEGORIES,
 )
 
 load_dotenv()
 
 unified_chat_bp = Blueprint("unified_chat", __name__)
+groq_client     = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# ── Clients / config ──────────────────────────────────────────────────
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
-OCCASION_CONFIDENCE_THRESHOLD = 0.15   # tune this if needed
+OCCASION_CONFIDENCE_THRESHOLD = 0.15
 
 
 # ═════════════════════════════════════════════════════════════════════
 #  DB HELPERS
 # ═════════════════════════════════════════════════════════════════════
 
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
-
-
-def fetch_user_context(user_id: int) -> dict:
-    """Pull last 10 searches + wishlist categories/brands for personalisation."""
+def fetch_user_context(user_id) -> dict:
     if not user_id:
         return {}
     try:
-        db  = get_db()
-        cur = db.cursor(dictionary=True)
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+        try:
+            cur.execute(
+                "SELECT search_query FROM search_history "
+                "WHERE user_id = %s ORDER BY searched_at DESC LIMIT 10",
+                (user_id,),
+            )
+            searches = [r["search_query"] for r in cur.fetchall()]
 
-        cur.execute(
-            "SELECT search_query FROM search_history "
-            "WHERE user_id = %s ORDER BY searched_at DESC LIMIT 10",
-            (user_id,),
-        )
-        searches = [r["search_query"] for r in cur.fetchall()]
-
-        cur.execute(
-            "SELECT DISTINCT p.category, p.brand "
-            "FROM wishlist w JOIN products p ON w.product_id = p.id "
-            "WHERE w.user_id = %s LIMIT 10",
-            (user_id,),
-        )
-        wish = cur.fetchall()
-        db.close()
+            cur.execute(
+                "SELECT DISTINCT p.category, p.brand "
+                "FROM wishlist w JOIN products p ON w.product_id = p.id "
+                "WHERE w.user_id = %s LIMIT 10",
+                (user_id,),
+            )
+            wish = cur.fetchall()
+        finally:
+            cur.close()
+            conn.close()
 
         return {
-            "recent_searches":      searches,
-            "wishlist_categories":  list({i["category"] for i in wish}),
-            "wishlist_brands":      list({i["brand"]    for i in wish}),
+            "recent_searches":     searches,
+            "wishlist_categories": list({i["category"] for i in wish}),
+            "wishlist_brands":     list({i["brand"]    for i in wish}),
         }
     except Exception as e:
         print(f"[unified] fetch_user_context error: {e}")
@@ -91,28 +77,27 @@ def save_search(user_id, query: str):
     if not user_id or not query:
         return
     try:
-        db  = get_db()
-        cur = db.cursor()
-        cur.execute(
-            "INSERT INTO search_history (user_id, search_query, searched_at) "
-            "VALUES (%s, %s, %s)",
-            (user_id, query, datetime.utcnow()),
-        )
-        db.commit()
-        db.close()
+        conn = get_db()
+        cur  = conn.cursor()
+        try:
+            cur.execute(
+                "INSERT INTO search_history (user_id, search_query, searched_at) "
+                "VALUES (%s, %s, %s)",
+                (user_id, query, datetime.utcnow()),
+            )
+            conn.commit()
+        finally:
+            cur.close()
+            conn.close()
     except Exception as e:
         print(f"[unified] save_search error: {e}")
 
 
 # ═════════════════════════════════════════════════════════════════════
-#  GENERAL PATH — helpers
+#  GENERAL PATH HELPERS
 # ═════════════════════════════════════════════════════════════════════
 
 def extract_filters(message: str, user_context: dict) -> dict:
-    """
-    Groq llama3-8b: parse message into structured filter JSON.
-    Fast model used here — filter extraction doesn't need quality reasoning.
-    """
     context_hint = ""
     if user_context.get("recent_searches"):
         context_hint = (
@@ -137,25 +122,17 @@ Return JSON with these optional keys (omit keys that are not mentioned):
   "min_price":  number,
   "min_rating": number (1-5)
 }
-
-Examples:
-"blue jeans under 2000"       → {"category":"Jeans","max_price":2000,"keyword":"blue"}
-"Nike sports shoes"           → {"category":"Sports Shoes","brand":"Nike"}
-"good rated casual shirt"     → {"category":"Shirts","min_rating":4}
-"watches between 500 and 3000"→ {"min_price":500,"max_price":3000,"category":"Watches"}
 """
-
     resp = groq_client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
-            {"role": "system",  "content": system},
-            {"role": "user",    "content": message + context_hint},
+            {"role": "system", "content": system},
+            {"role": "user",   "content": message + context_hint},
         ],
         temperature=0.1,
         max_tokens=300,
     )
-    raw = resp.choices[0].message.content.strip()
-    raw = re.sub(r"```json|```", "", raw).strip()
+    raw = re.sub(r"```json|```", "", resp.choices[0].message.content.strip()).strip()
     try:
         return json.loads(raw)
     except Exception:
@@ -163,7 +140,6 @@ Examples:
 
 
 def fetch_general_products(filters: dict, limit: int = 6) -> list:
-    """Build dynamic SQL from extracted filters and return ranked products."""
     conditions = ["stock > 0"]
     params     = []
 
@@ -201,11 +177,15 @@ def fetch_general_products(filters: dict, limit: int = 6) -> list:
     params.append(limit)
 
     try:
-        db  = get_db()
-        cur = db.cursor(dictionary=True)
-        cur.execute(sql, params)
-        rows = cur.fetchall()
-        db.close()
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+        try:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+        finally:
+            cur.close()
+            conn.close()
+
         for r in rows:
             r["price"]   = float(r["price"]  or 0)
             r["rating"]  = float(r["rating"] or 0)
@@ -216,13 +196,9 @@ def fetch_general_products(filters: dict, limit: int = 6) -> list:
         import traceback; traceback.print_exc()
         return []
 
-def generate_general_reply(
-    message: str,
-    products: list,
-    user_context: dict,
-    chat_history: list,
-) -> str:
-    """Groq llama3-70b: write a friendly reply for the general product path."""
+
+def generate_general_reply(message: str, products: list,
+                            user_context: dict, chat_history: list) -> str:
     product_summary = "\n".join(
         f"- {p['name']} | {p['brand']} | ₹{p['price']} "
         f"| ⭐{p['rating']} | {p['category']}"
@@ -266,22 +242,12 @@ Rules:
 
 
 # ═════════════════════════════════════════════════════════════════════
-#  OCCASION PATH — helper
+#  OCCASION PATH HELPER
 # ═════════════════════════════════════════════════════════════════════
 
-def generate_occasion_reply(
-    message: str,
-    occasion_key: str,
-    occasion_label: str,
-    outfit: dict,
-    products: list,
-    user_context: dict,
-    chat_history: list,
-) -> str:
-    """
-    Groq llama3-70b: write a personalised occasion reply.
-    Replaces the old hardcoded CHATBOT_REPLIES dict.
-    """
+def generate_occasion_reply(message: str, occasion_key: str, occasion_label: str,
+                             outfit: dict, products: list,
+                             user_context: dict, chat_history: list) -> str:
     outfit_summary = "\n".join(
         f"- {slot.upper()}: {item['name']} | {item['brand']} | ₹{item['price']} "
         f"| match {item.get('match_pct', '?')}%"
@@ -335,33 +301,6 @@ Keep it conversational, encouraging, and specific. Use ₹ for prices.
 
 @unified_chat_bp.route("/api/chat/unified", methods=["POST"])
 def unified_chat():
-    """
-    Request JSON:
-    {
-      "message":     string   (required),
-      "history":     list     (optional, last N turns),
-      "refinements": dict     (optional, e.g. {"budget":"mid","brand":"Nike"}),
-      "user_id":     int      (optional, passed from frontend for guest mode)
-    }
-
-    Response JSON:
-    {
-      "type":         "occasion" | "general" | "clarify",
-      "reply":        string,
-      "products":     list,
-      "outfit":       dict   (occasion only),
-      "occasion":     string (occasion only),
-      "occasion_label": string (occasion only),
-      "occasion_icon":  string (occasion only),
-      "filters_used": dict   (general only),
-      "nlp": {
-        "confidence":   float,
-        "method":       string,
-        "alternatives": list
-      }
-    }
-    """
-    # ── 1. Parse request ──────────────────────────────────────────────
     data        = request.get_json() or {}
     message     = (data.get("message") or "").strip()
     history     = data.get("history")     or []
@@ -370,22 +309,19 @@ def unified_chat():
     if not message:
         return jsonify({"error": "message is required"}), 400
 
-    # ── 2. Resolve user_id (JWT optional — guest fallback) ────────────
+    # Resolve user_id (JWT optional — guest fallback)
     user_id = None
     try:
         verify_jwt_in_request(optional=True)
         user_id = get_jwt_identity()
     except Exception:
         pass
-    # also accept explicit user_id from frontend (guest sessions)
     if not user_id:
         user_id = data.get("user_id")
 
-    # ── 3. Fetch user context from MySQL ─────────────────────────────
     user_context = fetch_user_context(user_id)
     prefs        = get_user_preferences(user_id) if user_id else {}
 
-    # ── 4. NLP: classify occasion ─────────────────────────────────────
     nlp_result = classify_occasion(message)
     occasion   = nlp_result["occasion"]
     confidence = nlp_result["confidence"]
@@ -395,20 +331,14 @@ def unified_chat():
         "alternatives": nlp_result.get("alternatives", []),
     }
 
-    print(
-        f"[unified] msg='{message}' "
-        f"occasion={occasion} conf={confidence} method={nlp_result['method']}"
-    )
+    print(f"[unified] msg='{message}' occasion={occasion} conf={confidence}")
 
-    # ── 5. CLARIFY — confidence too low, no keyword matched ───────────
+    # ── CLARIFY / GENERAL path ────────────────────────────────────────
     if not occasion or confidence < OCCASION_CONFIDENCE_THRESHOLD:
-
-        # try general Groq path first before giving up
         try:
             filters  = extract_filters(message, user_context)
             products = fetch_general_products(filters, limit=6)
 
-            # if products found → treat as general query
             if products:
                 reply = generate_general_reply(message, products, user_context, history)
                 save_search(user_id, message)
@@ -423,9 +353,6 @@ def unified_chat():
         except Exception as e:
             print(f"[unified] general path error: {e}")
 
-        # no products found either → ask user to clarify
-        from occasion_nlp import OCCASION_LABELS, OCCASION_ICONS
-        from occasion_engine import OCCASION_CATEGORIES
         save_search(user_id, message)
         return jsonify({
             "type":  "clarify",
@@ -443,7 +370,7 @@ def unified_chat():
             "nlp":      nlp_meta,
         })
 
-    # ── 6. OCCASION PATH ──────────────────────────────────────────────
+    # ── OCCASION path ─────────────────────────────────────────────────
     try:
         outfit   = fetch_outfit_set(occasion, prefs, refinements)
         products = fetch_occasion_products(occasion, prefs, refinements)
@@ -468,7 +395,6 @@ def unified_chat():
             OCCASION_LABELS.get(occasion, occasion),
             outfit, top12, user_context, history,
         )
-
         save_search(user_id, message)
 
         return jsonify({
@@ -489,15 +415,8 @@ def unified_chat():
         return jsonify({"error": f"Occasion engine error: {str(e)}"}), 500
 
 
-# ═════════════════════════════════════════════════════════════════════
-#  OCCASIONS LIST  (used by frontend chip buttons on load)
-# ═════════════════════════════════════════════════════════════════════
-
 @unified_chat_bp.route("/api/chat/occasions", methods=["GET"])
 def list_occasions():
-    """Returns all occasion options for the frontend chip buttons."""
-    from occasion_nlp    import OCCASION_LABELS, OCCASION_ICONS
-    from occasion_engine import OCCASION_CATEGORIES
     return jsonify([
         {"key": k, "label": OCCASION_LABELS[k], "icon": OCCASION_ICONS[k]}
         for k in OCCASION_CATEGORIES

@@ -12,25 +12,33 @@ import os
 import jwt
 import bcrypt
 import mysql.connector
+from mysql.connector import pooling
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from otp_service import generate_otp, otp_expiry, is_otp_valid, send_otp
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
-# auth_bp          = Blueprint("auth", __name__)
+# ── Connection Pool ───────────────────────────────────────────────
+db_pool = pooling.MySQLConnectionPool(
+    pool_name="auth_pool",          # unique name per file
+    pool_size=2,
+    pool_reset_session=True,
+    host=os.environ.get("DB_HOST"),
+    user=os.environ.get("DB_USER"),
+    password=os.environ.get("DB_PASSWORD"),
+    database=os.environ.get("DB_NAME"),
+    port=int(os.environ.get("DB_PORT", 3306))
+)
+
+def get_db():
+    """Borrow a connection from the pool. Always call conn.close() when done."""
+    return db_pool.get_connection()
+
+# ─────────────────────────────────────────────────────────────────
+
+auth_bp          = Blueprint("auth", __name__, url_prefix="/api/auth")
 JWT_SECRET       = os.getenv("JWT_SECRET", "your-jwt-secret")
 JWT_EXPIRY_HOURS = 24
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
-
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
 
 def make_jwt(user_id: int, email: str) -> str:
     payload = {
@@ -40,11 +48,13 @@ def make_jwt(user_id: int, email: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
 
+
 def validate_fields(data: dict, required: list):
     for field in required:
         if not data.get(field, "").strip():
             return f"'{field}' is required."
     return None
+
 
 def create_otp_record(cur, user_id: int, channel: str) -> str:
     """Insert a fresh OTP row into otp_verification, return the OTP code."""
@@ -60,10 +70,6 @@ def create_otp_record(cur, user_id: int, channel: str) -> str:
 # POST /api/auth/register
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    """
-    Body: { name, email, password, phone (optional), otp_channel: "email"|"sms"|"both" }
-    Creates unverified user, inserts OTP row, sends OTP.
-    """
     data    = request.get_json() or {}
     channel = data.get("otp_channel", "email")
 
@@ -119,17 +125,13 @@ def register():
         conn.rollback()
         return jsonify({"error": "Registration failed.", "detail": str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
 
 # POST /api/auth/verify-otp
 @auth_bp.route("/verify-otp", methods=["POST"])
 def verify_otp():
-    """
-    Body: { user_id, otp }
-    Validates from otp_verification table.
-    Marks OTP as used + user as verified. Returns JWT.
-    """
     data = request.get_json() or {}
     if not data.get("user_id") or not data.get("otp", "").strip():
         return jsonify({"error": "'user_id' and 'otp' are required."}), 400
@@ -147,7 +149,6 @@ def verify_otp():
         if user["is_verified"]:
             return jsonify({"error": "Account already verified. Please log in."}), 400
 
-        # Get latest unused OTP for this user
         cur.execute(
             """SELECT id, otp_code, expires_at FROM otp_verification
                WHERE user_id = %s AND is_used = 0
@@ -162,7 +163,6 @@ def verify_otp():
         if not valid:
             return jsonify({"error": err}), 400
 
-        # Mark OTP used + verify user in one transaction
         cur.execute("UPDATE otp_verification SET is_used = 1 WHERE id = %s", (otp_row["id"],))
         cur.execute("UPDATE users SET is_verified = 1 WHERE id = %s", (user_id,))
         conn.commit()
@@ -178,16 +178,13 @@ def verify_otp():
         conn.rollback()
         return jsonify({"error": "Verification failed.", "detail": str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
 
 # POST /api/auth/resend-otp
 @auth_bp.route("/resend-otp", methods=["POST"])
 def resend_otp():
-    """
-    Body: { user_id }  OR  { email }
-    Creates a fresh OTP row and resends using last channel.
-    """
     data = request.get_json() or {}
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
@@ -203,7 +200,6 @@ def resend_otp():
         if not user:
             return jsonify({"error": "User not found."}), 404
 
-        # Reuse last channel
         cur.execute(
             "SELECT channel FROM otp_verification WHERE user_id = %s ORDER BY created_at DESC LIMIT 1",
             (user["id"],)
@@ -215,22 +211,23 @@ def resend_otp():
         conn.commit()
 
         result = send_otp(user["name"], user["email"], user["phone"], otp, channel)
-        return jsonify({"message": "OTP resent.", "email_sent": result["email_sent"], "sms_sent": result["sms_sent"]}), 200
+        return jsonify({
+            "message":    "OTP resent.",
+            "email_sent": result["email_sent"],
+            "sms_sent":   result["sms_sent"],
+        }), 200
 
     except Exception as e:
         conn.rollback()
         return jsonify({"error": "Resend failed.", "detail": str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
 
 
 # POST /api/auth/login
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """
-    Body: { email, password }
-    Only verified users can log in.
-    """
     data = request.get_json() or {}
     err  = validate_fields(data, ["email", "password"])
     if err:
@@ -264,4 +261,5 @@ def login():
     except Exception as e:
         return jsonify({"error": "Login failed.", "detail": str(e)}), 500
     finally:
-        cur.close(); conn.close()
+        cur.close()
+        conn.close()
