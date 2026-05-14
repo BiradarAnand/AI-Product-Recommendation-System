@@ -261,7 +261,7 @@ def register():
         cursor.close()
         conn.close()
 
-
+# app.py — bottom of file, replace your current __main__ block
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)

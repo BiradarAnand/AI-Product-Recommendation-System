@@ -17,23 +17,9 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from otp_service import generate_otp, otp_expiry, is_otp_valid, send_otp
 
-# ── Connection Pool ───────────────────────────────────────────────
-db_pool = pooling.MySQLConnectionPool(
-    pool_name="auth_pool",          # unique name per file
-    pool_size=2,
-    pool_reset_session=True,
-    host=os.environ.get("DB_HOST"),
-    user=os.environ.get("DB_USER"),
-    password=os.environ.get("DB_PASSWORD"),
-    database=os.environ.get("DB_NAME"),
-    port=int(os.environ.get("DB_PORT", 3306))
-)
-
-def get_db():
-    """Borrow a connection from the pool. Always call conn.close() when done."""
-    return db_pool.get_connection()
-
-# ─────────────────────────────────────────────────────────────────
+# ✅ auth_routes.py — top of file
+from db import get_db   
+# use the single shared pool──────────────────────────────────────────────────
 
 auth_bp          = Blueprint("auth", __name__, url_prefix="/api/auth")
 JWT_SECRET       = os.getenv("JWT_SECRET", "your-jwt-secret")

@@ -13,29 +13,21 @@ from flask import Blueprint, request, jsonify
 from functools import wraps
 import jwt
 import os
-import mysql.connector
 from dotenv import load_dotenv
 
 load_dotenv()
 
 from recommendation_engine import HybridRecommendationEngine
+from db import get_db   # ✅ single shared pool
 
 recommend_bp = Blueprint("recommend", __name__)
 _engine: HybridRecommendationEngine | None = None
 
 JWT_SECRET = os.getenv("JWT_SECRET", "your-jwt-secret")
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
-
 
 # ─────────────────────────────────────────────
-# ENGINE LOADER  (call at app startup)DF
+# ENGINE LOADER  (call at app startup)
 # ─────────────────────────────────────────────
 def load_engine():
     global _engine
@@ -89,17 +81,18 @@ def _log_search(user_id: int | None, query: str):
     if not user_id or not query:
         return
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = get_db()          # ✅ shared pool — no new connection created
         cur  = conn.cursor()
         cur.execute(
             "INSERT INTO search_history (user_id, search_query) VALUES (%s, %s)",
             (user_id, query[:255])
         )
         conn.commit()
-        cur.close()
-        conn.close()
     except Exception as e:
         print(f"[SearchLog] Failed to log search: {e}")
+    finally:
+        cur.close()
+        conn.close()            # ✅ returns connection back to pool
 
 
 # ─────────────────────────────────────────────
@@ -236,7 +229,6 @@ def outfit(product_id: int):
 
     GET /api/recommend/outfit/42
     """
-    # Map category → complementary categories
     OUTFIT_MAP = {
         "shirts":       ["pants", "trousers", "jeans", "jackets", "shoes"],
         "dresses":      ["heels", "sandals", "handbags", "jewellery"],
@@ -286,9 +278,9 @@ def health():
     collab_ready = engine_ready and _engine.collab_model.is_fitted
     pop_ready    = engine_ready and bool(_engine._pop_scores)
     return jsonify({
-        "status":                "ok" if engine_ready else "degraded",
-        "content_model_ready":   engine_ready,
-        "collab_model_ready":    collab_ready,
+        "status":                  "ok" if engine_ready else "degraded",
+        "content_model_ready":     engine_ready,
+        "collab_model_ready":      collab_ready,
         "popularity_scores_ready": pop_ready,
-        "product_count":         len(_engine._pop_scores) if engine_ready else 0,
+        "product_count":           len(_engine._pop_scores) if engine_ready else 0,
     }), 200 if engine_ready else 503

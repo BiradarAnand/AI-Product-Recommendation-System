@@ -18,16 +18,8 @@ from functools import wraps
 data_bp = Blueprint("data", __name__)
 JWT_SECRET = os.getenv("JWT_SECRET", "your-jwt-secret")
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST"),
-    "port": int(os.getenv("DB_PORT")),
-    "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD"),
-    "database": os.getenv("DB_NAME"),
-}
-
-def get_db():
-    return mysql.connector.connect(**DB_CONFIG)
+# ✅ Add this at the top instead
+from db import get_db
 
 def get_user_id():
     """Extract user_id from JWT token in Authorization header."""
