@@ -13,15 +13,13 @@ load_dotenv()
 
 # ── Blueprint imports ──────────────────────────────────────────────
 from recommend_routes import recommend_bp, load_engine
-from auth_routes import auth_bp
+from auth_routes import auth_bp          # ✅ imported ONCE (removed duplicate)
 from data_routes import data_bp
 from occasion_engine import occasion_bp
 
 app = Flask(__name__)
 
-CORS(app)
-
-# ✅ Option 2 — Restrict to your Vercel frontend only (recommended for production)
+# ✅ CORS called ONCE only (removed the bare CORS(app) call)
 CORS(app, resources={
     r"/api/*": {
         "origins": ["https://ai-product-recommendation-system-phi.vercel.app"],
@@ -30,10 +28,8 @@ CORS(app, resources={
     }
 })
 
-from auth_routes import auth_bp
-app.register_blueprint(auth_bp)
-
-# ── Register blueprints ───────────────────────────────────────────
+# ── Register blueprints — each registered ONCE ───────────────────
+# ✅ Removed the extra app.register_blueprint(auth_bp) without url_prefix
 app.register_blueprint(auth_bp,        url_prefix="/api/auth")
 app.register_blueprint(recommend_bp,   url_prefix="/api")
 app.register_blueprint(data_bp,        url_prefix="/api")
@@ -274,7 +270,8 @@ def register():
         cursor.close()
         conn.close()
 
-# app.py — bottom of file, replace your current __main__ block
+
+# ── Entry point ───────────────────────────────────────────────────
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
