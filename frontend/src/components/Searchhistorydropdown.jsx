@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-const API = axios.create({ baseURL: "http://localhost:5000/api" });
+const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com//api" });
 
 export default function SearchHistoryDropdown({ onSelect, onClose }) {
   const [history, setHistory] = useState([]);

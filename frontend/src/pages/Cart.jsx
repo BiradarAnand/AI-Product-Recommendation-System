@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
-const API = axios.create({ baseURL: "http://localhost:5000/api" });
+const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com/api" });
 
 export default function Cart() {
   const [cart, setCart] = useState(null);

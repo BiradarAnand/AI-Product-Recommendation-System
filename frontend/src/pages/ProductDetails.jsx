@@ -4,7 +4,7 @@ function ProductList() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/products")
+    fetch("https://ai-product-recommendation-system-by60.onrender.com/products")
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error(err));
@@ -31,7 +31,7 @@ function ProductList() {
 
             {/* Image */}
             <img
-              src={`http://127.0.0.1:5000/${item.image_url}`}
+              src={`https://ai-product-recommendation-system-by60.onrender.com/${item.image_url}`}
               alt={item.name}
               style={{ width: "100%", height: "200px", objectFit: "cover" }}
             />

@@ -5,7 +5,7 @@ import RecommendedProducts from "../components/RecommendedProducts";
 
 // ── Constants (safe outside component — no hooks) ──────────────────────────
 
-const API = axios.create({ baseURL: "http://127.0.0.1:5000" });
+const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com" });
 
 const HERO_SLIDES = [
   { image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=700&q=80", label: "Summer Edit 2026" },
@@ -59,7 +59,7 @@ const imgSrc = (p) => {
     return p.image_url.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=90");
   }
   if (p.image_url.startsWith("http")) return p.image_url;
-  return `http://127.0.0.1:5000/${p.image_url}`;
+  return `https://ai-product-recommendation-system-by60.onrender.com/${p.image_url}`;
 };
 
 const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
@@ -117,7 +117,7 @@ export default function Home() {
   // ── Fetch products ──
 useEffect(() => {
   axios
-    .get("http://127.0.0.1:5000/products")
+    .get("https://ai-product-recommendation-system-by60.onrender.com/products")
     .then((res) => {
       const sorted = [...res.data].sort((a, b) => {
         const aGood = (a.image_url || "").startsWith("http");

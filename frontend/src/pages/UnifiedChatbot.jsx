@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API = "http://127.0.0.1:5000";
+const API = "https://ai-product-recommendation-system-by60.onrender.com";
 
 const SLOT_ORDER = ["shirt", "pant", "shoes", "watch"];
 

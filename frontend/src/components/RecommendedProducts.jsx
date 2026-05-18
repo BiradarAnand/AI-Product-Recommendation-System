@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const API = axios.create({ baseURL: "http://localhost:5000/api" });
+const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com/api" });
 
 // Category-specific fallback images
 const CATEGORY_IMAGES = {
@@ -30,7 +30,7 @@ const getProductImage = (product) => {
   const url = product.image_url || "";
   if (url.includes("unsplash.com")) return url;
   if (url.startsWith("http"))       return url;
-  if (url)                          return `http://127.0.0.1:5000/${url}`;
+  if (url)                          return `https://ai-product-recommendation-system-by60.onrender.com/${url}`;
   return getFallbackImage(product.category);
 };
 
