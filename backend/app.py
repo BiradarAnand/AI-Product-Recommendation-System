@@ -21,6 +21,18 @@ app = Flask(__name__)
 
 CORS(app)
 
+# ✅ Option 2 — Restrict to your Vercel frontend only (recommended for production)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["https://ai-product-recommendation-system-phi.vercel.app"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
+
+from auth_routes import auth_bp
+app.register_blueprint(auth_bp)
+
 # ── Register blueprints ───────────────────────────────────────────
 app.register_blueprint(auth_bp,        url_prefix="/api/auth")
 app.register_blueprint(recommend_bp,   url_prefix="/api")
