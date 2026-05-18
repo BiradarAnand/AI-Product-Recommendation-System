@@ -21,7 +21,7 @@ app = Flask(__name__)
 
 # ✅ CORS called ONCE only (removed the bare CORS(app) call)
 CORS(app, resources={
-    r"/api/*": {
+    r"/*": {
         "origins": ["https://ai-product-recommendation-system-phi.vercel.app"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"]
