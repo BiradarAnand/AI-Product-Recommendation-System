@@ -18,7 +18,12 @@ from data_routes import data_bp
 from occasion_engine import occasion_bp
 
 app = Flask(__name__)
-CORS(app)
+
+CORS(app, resources={r"/api/*": {"origins": [
+    "https://ai-product-recommendation-system-phi.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000"
+]}})
 
 # ── Register blueprints ───────────────────────────────────────────
 app.register_blueprint(auth_bp,        url_prefix="/api/auth")
