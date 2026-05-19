@@ -28,6 +28,14 @@ CORS(app, resources={
     }
 })
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "https://ai-product-recommendation-system-phi.vercel.app"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
+
 # ── Register blueprints — each registered ONCE ───────────────────
 # ✅ Removed the extra app.register_blueprint(auth_bp) without url_prefix
 app.register_blueprint(auth_bp,        url_prefix="/api/auth")
@@ -234,41 +242,41 @@ def verify_otp():
         conn.close()
 
 
-@app.route("/register", methods=["POST"])
-def register():
-    data     = request.get_json()
-    name     = data.get("name")
-    email    = data.get("email")
-    password = data.get("password")
+# @app.route("/register", methods=["POST"])
+# def register():
+#     data     = request.get_json()
+#     name     = data.get("name")
+#     email    = data.get("email")
+#     password = data.get("password")
 
-    if not name or not email or not password:
-        return jsonify({"message": "All fields required"}), 400
+#     if not name or not email or not password:
+#         return jsonify({"message": "All fields required"}), 400
 
-    conn = get_db()
-    try:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT is_verified FROM otp_verification
-            WHERE email = %s ORDER BY created_at DESC LIMIT 1
-        """, (email,))
-        result = cursor.fetchone()
+#     conn = get_db()
+#     try:
+#         cursor = conn.cursor()
+#         cursor.execute("""
+#             SELECT is_verified FROM otp_verification
+#             WHERE email = %s ORDER BY created_at DESC LIMIT 1
+#         """, (email,))
+#         result = cursor.fetchone()
 
-        if not result or not result[0]:
-            return jsonify({"message": "Please verify OTP first ❗"}), 400
+#         if not result or not result[0]:
+#             return jsonify({"message": "Please verify OTP first ❗"}), 400
 
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        if cursor.fetchone():
-            return jsonify({"message": "User already exists"}), 400
+#         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+#         if cursor.fetchone():
+#             return jsonify({"message": "User already exists"}), 400
 
-        cursor.execute(
-            "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
-            (name, email, password)
-        )
-        conn.commit()
-        return jsonify({"message": "Registered successfully ✅"})
-    finally:
-        cursor.close()
-        conn.close()
+#         cursor.execute(
+#             "INSERT INTO users (name, email, password) VALUES (%s, %s, %s)",
+#             (name, email, password)
+#         )
+#         conn.commit()
+#         return jsonify({"message": "Registered successfully ✅"})
+#     finally:
+#         cursor.close()
+#         conn.close()
 
 
 # ── Entry point ───────────────────────────────────────────────────
