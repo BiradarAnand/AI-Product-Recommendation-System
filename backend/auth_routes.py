@@ -41,14 +41,14 @@ def validate_fields(data: dict, required: list):
             return f"'{field}' is required."
     return None
 
-
 def create_otp_record(cur, user_id: int, channel: str) -> str:
-    """Insert a fresh OTP row into otp_verification, return the OTP code."""
     otp     = generate_otp()
     expires = otp_expiry()
+    # enum only allows 'email' or 'sms' — never 'both'
+    db_channel = "sms" if channel == "sms" else "email"
     cur.execute(
         "INSERT INTO otp_verification (user_id, otp_code, channel, expires_at) VALUES (%s, %s, %s, %s)",
-        (user_id, otp, channel, expires)
+        (user_id, otp, db_channel, expires)
     )
     return otp
 
