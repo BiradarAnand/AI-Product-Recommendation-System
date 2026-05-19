@@ -21,7 +21,7 @@ from otp_service import generate_otp, otp_expiry, is_otp_valid, send_otp
 from db import get_db   
 # use the single shared pool──────────────────────────────────────────────────
 
-auth_bp          = Blueprint("auth", __name__, url_prefix="/api/auth")
+auth_bp          = Blueprint("auth", __name__)
 JWT_SECRET       = os.getenv("JWT_SECRET", "your-jwt-secret")
 JWT_EXPIRY_HOURS = 24
 
