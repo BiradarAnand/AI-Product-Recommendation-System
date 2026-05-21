@@ -88,24 +88,24 @@ def health():
 def get_image(filename):
     return send_from_directory('images', filename)
 
-
 @app.route("/products")
 def get_products():
-    page     = request.args.get("page", 1, type=int)
-    per_page = request.args.get("per_page", 20, type=int)
-    offset   = (page - 1) * per_page
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
 
-    conn = get_db()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(
-        "SELECT * FROM products LIMIT %s OFFSET %s",
-        (per_page, offset)
-    )
-    products = cursor.fetchall()
-    cursor.close()
-    conn.close()   # ← always close after use!
-    return jsonify(products)
+        cursor.execute("SELECT * FROM products")
+        products = cursor.fetchall()
 
+        cursor.close()
+        conn.close()
+
+        return jsonify(products)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+    
 
 @app.route("/admin/add-product", methods=["POST"])
 def add_product():
