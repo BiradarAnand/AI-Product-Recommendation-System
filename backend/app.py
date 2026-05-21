@@ -25,11 +25,15 @@ CORS(
     app,
     resources={r"/*": {"origins": [
         "http://localhost:5173",
-        "https://ai-product-recommendation-system-phi.vercel.app"
+        "https://ai-product-recommendation-system-phi.vercel.app",
+        "https://ai-product-recommendation-sys-git-a014cc-biradaranands-projects.vercel.app",
+        "https://ai-product-recommendation-system-py98jsht0.vercel.app"
     ]}},
     supports_credentials=True,
-    allow_headers=["Content-Type", "Authorization"]
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
+
 
 @app.after_request
 def add_cors_headers(response):
