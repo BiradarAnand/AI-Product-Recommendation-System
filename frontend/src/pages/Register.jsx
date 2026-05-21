@@ -48,7 +48,36 @@ export default function Register() {
   const handleFormSubmit = async (e) => {
     e.preventDefault(); setLoading(true); notify("");
     try {
-      const res = await API.post("/auth/register", { ...formData, otp_channel: "email" });
+      // const res = await API.post("/auth/register", { ...formData, otp_channel: "email" });
+      console.log("STEP 1 START");
+
+try {
+  const res = await API.post("/auth/register", {
+    ...formData,
+    otp_channel: "email"
+  });
+
+  console.log("STEP 1 SUCCESS", res.data);
+
+  setOtpData({ user_id: res.data.user_id, otp: "" });
+
+  notify("OTP sent to your email. Check your inbox!");
+  setStep("otp");
+
+} catch (err) {
+
+  console.log("STEP 1 FAILED");
+
+  console.log("FULL ERROR:", err);
+
+  console.log("ERROR RESPONSE:", err.response);
+
+  console.log("ERROR DATA:", err.response?.data);
+
+  notify(err.response?.data?.error || "Registration failed", true);
+}
+
+
       setOtpData({ user_id: res.data.user_id, otp: "" });
       notify("OTP sent to your email. Check your inbox!");
       setStep("otp");
@@ -60,7 +89,38 @@ export default function Register() {
   const handleOtpSubmit = async (e) => {
     e.preventDefault(); setLoading(true); notify("");
     try {
-      const res = await API.post("/auth/verify-otp", otpData);
+      // const res = await API.post("/auth/verify-otp", otpData);
+
+      console.log("STEP 2 START");
+
+try {
+
+  const res = await API.post("/auth/verify-otp", otpData);
+
+  console.log("STEP 2 SUCCESS", res.data);
+
+  localStorage.setItem("token", res.data.token);
+
+  if (res.data.user) {
+    localStorage.setItem("user", JSON.stringify(res.data.user));
+  }
+
+  notify("Email verified!");
+  setStep("preferences");
+
+} catch (err) {
+
+  console.log("STEP 2 FAILED");
+
+  console.log(err);
+
+  console.log(err.response);
+
+  console.log(err.response?.data);
+
+  notify(err.response?.data?.error || "Invalid OTP", true);
+}
+
       localStorage.setItem("token", res.data.token);
       if (res.data.user) localStorage.setItem("user", JSON.stringify(res.data.user));
       notify("Email verified! Setting up your style profile…");
