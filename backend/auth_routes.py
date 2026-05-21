@@ -94,7 +94,7 @@ def register():
         otp    = create_otp_record(cur, user_id, channel)
         conn.commit()
 
-        result = send_otp(name, email, phone, otp, channel)
+        result = send_otp(name, email, otp)
         if not result["email_sent"] and not result["sms_sent"]:
             return jsonify({"error": "Failed to send OTP.", "detail": result["errors"]}), 500
 

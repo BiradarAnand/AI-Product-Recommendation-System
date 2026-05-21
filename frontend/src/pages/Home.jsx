@@ -64,6 +64,21 @@ const imgSrc = (p) => {
 
 const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
 
+const getFallbackImage = (category = "") => {
+  const cat = (category || "").toLowerCase().trim();
+  const map = {
+    "shirts":       "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80",
+    "tshirts":      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
+    "jeans":        "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80",
+    "trousers":     "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&q=80",
+    "track pants":  "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80",
+    "casual shoes": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80",
+    "sports shoes": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "watches":      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+  };
+  return map[cat] || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80";
+};
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -299,6 +314,7 @@ useEffect(() => {
           <li className="cursor-pointer hover:text-yellow-500 transition-colors">New Releases</li>
           <li className="cursor-pointer hover:text-yellow-500 transition-colors">Most Reviewed</li>
           {user?.role === "admin" && (
+            
             <li>
               <Link to="/admin" className="text-red-500 font-bold hover:text-red-600">Admin</Link>
             </li>

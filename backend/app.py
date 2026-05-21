@@ -20,13 +20,16 @@ from occasion_engine import occasion_bp
 app = Flask(__name__)
 
 # ✅ CORS called ONCE only (removed the bare CORS(app) call)
-CORS(app, resources={
-    r"/*": {
-        "origins": ["https://ai-product-recommendation-system-phi.vercel.app"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
-    }
-})
+
+CORS(
+    app,
+    resources={r"/*": {"origins": [
+        "http://localhost:5173",
+        "https://ai-product-recommendation-system-phi.vercel.app"
+    ]}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"]
+)
 
 @app.after_request
 def add_cors_headers(response):
@@ -82,22 +85,22 @@ def get_image(filename):
     return send_from_directory('images', filename)
 
 
-@app.route("/products", methods=["GET"])
+@app.route("/products")
 def get_products():
+    page     = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 20, type=int)
+    offset   = (page - 1) * per_page
+
     conn = get_db()
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT * FROM products
-            ORDER BY
-                CASE WHEN image_url LIKE 'http%' THEN 0 ELSE 1 END,
-                rating DESC
-        """)
-        products = cursor.fetchall()
-        return jsonify(products)
-    finally:
-        cursor.close()
-        conn.close()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM products LIMIT %s OFFSET %s",
+        (per_page, offset)
+    )
+    products = cursor.fetchall()
+    cursor.close()
+    conn.close()   # ← always close after use!
+    return jsonify(products)
 
 
 @app.route("/admin/add-product", methods=["POST"])

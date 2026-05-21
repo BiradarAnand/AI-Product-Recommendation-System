@@ -21,7 +21,6 @@ export default function Wishlist() {
       setLoading(false);
       return;
     }
-    
     try {
       const res = await API.get("/wishlist", { headers: { Authorization: `Bearer ${token}` } });
       setWishlist(res.data);
