@@ -21,13 +21,40 @@ export default function Login() {
     document.head.appendChild(link);
   }
 
+  // Decode JWT payload (base64) to extract role without backend change
+  const decodeToken = (token) => {
+    try {
+      const payload = token.split(".")[1];
+      const decoded = JSON.parse(atob(payload));
+      return decoded;
+    } catch {
+      return {};
+    }
+  };
+
+  // Admin emails — update this list to match your database
+  const ADMIN_EMAILS = ["arunchityala18@gmail.com", "biradaranandof@gmail.com"];
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(""); setMessage(""); setLoading(true);
     try {
       const res = await API.post("/auth/login", { email, password });
-      localStorage.setItem("token", res.data.token);
-      if (res.data.user) localStorage.setItem("user", JSON.stringify(res.data.user));
+      const token = res.data.token;
+      localStorage.setItem("token", token);
+
+      // Decode JWT to get role if backend includes it
+      const tokenPayload = decodeToken(token);
+
+      // Build user object — use backend data, fill missing role from token or email check
+      const userData = res.data.user || {};
+      const role = userData.role
+        || tokenPayload.role
+        || (ADMIN_EMAILS.includes(email.toLowerCase()) ? "admin" : "user");
+
+      const finalUser = { ...userData, email, role };
+      localStorage.setItem("user", JSON.stringify(finalUser));
+
       setMessage("Login successful! Redirecting...");
       setTimeout(() => { window.location.href = "/"; }, 1200);
     } catch (err) {
