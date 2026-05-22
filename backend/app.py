@@ -16,6 +16,8 @@ from recommend_routes import recommend_bp, load_engine
 from auth_routes import auth_bp          # ✅ imported ONCE (removed duplicate)
 from data_routes import data_bp
 from occasion_engine import occasion_bp
+from admin_routes import admin_bp 
+
 
 app = Flask(__name__)
 
@@ -51,6 +53,8 @@ app.register_blueprint(data_bp,        url_prefix="/api")
 app.register_blueprint(occasion_bp)
 app.register_blueprint(chatbot_bp)
 app.register_blueprint(unified_chat_bp)
+app.register_blueprint(admin_bp,       url_prefix="/api/admin")  
+
 
 # ── Load ML models at startup ─────────────────────────────────────
 load_engine()
