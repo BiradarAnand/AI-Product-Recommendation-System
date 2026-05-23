@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import pooling, Error
 from contextlib import contextmanager
 import logging
-
+import os
 logger = logging.getLogger(__name__)
 
 # INCREASED pool size from default to handle concurrent requests
@@ -10,7 +10,7 @@ dbconfig = {
     "host": os.getenv("DB_HOST", "localhost"),
     "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", ""),
-    "database": os.getenv("DB_NAME", "product_db"),
+    "database": os.getenv("DB_NAME"),
 }
 
 _pool = None
