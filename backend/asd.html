@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1800">
+<title>AI Product Recommendation System</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#0d1f3c; --teal:#0ab5ae; --coral:#f0574a;
+  --gold:#f7b731; --soft:#f0f6f8; --white:#fff;
+  --gray:#6b7a99; --border:#dde8f0;
+}
+body{
+  font-family:'Nunito',sans-serif;
+  background:#c8d4e0;
+  display:flex; justify-content:center; align-items:center;
+  min-height:100vh; padding:24px;
+}
+
+.poster{
+  width:1800px;
+  background:var(--soft);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,0.3);
+}
+
+/* ── HEADER ── */
+.hdr{
+  background:var(--navy);
+  padding:20px 40px;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:24px; position:relative; overflow:hidden;
+}
+.hdr::after{
+  content:''; position:absolute; right:340px; top:-90px;
+  width:300px; height:300px; border-radius:50%;
+  background:radial-gradient(circle,rgba(10,181,174,.2) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hdr-left{display:flex;align-items:center;gap:16px;flex-shrink:0;}
+.logo-circle{
+  width:66px;height:66px;border-radius:50%;background:var(--white);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:17px;color:var(--navy);
+  border:3px solid var(--teal);flex-shrink:0;
+}
+.inst{color:rgba(255,255,255,.88);font-size:13px;line-height:1.6;letter-spacing:.03em;}
+.inst b{display:block;font-size:15px;font-weight:900;color:#fff;}
+
+.hdr-mid{text-align:center;flex:1;padding:0 20px;}
+.proj-title{font-size:42px;font-weight:900;color:#fff;line-height:1.05;letter-spacing:-.02em;}
+.proj-title .t{color:var(--teal);}
+.proj-title .c{color:var(--coral);}
+.proj-sub{font-size:13px;color:rgba(255,255,255,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:7px;}
+.chips{display:flex;gap:7px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.chip{
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+  padding:4px 11px;border-radius:5px;letter-spacing:.04em;
+}
+.chip.r{background:rgba(97,218,251,.15);color:#61dafb;border:1px solid rgba(97,218,251,.3);}
+.chip.f{background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.18);}
+.chip.m{background:rgba(0,150,170,.2);color:#4fd6e8;border:1px solid rgba(0,150,170,.4);}
+.chip.a{background:rgba(247,183,49,.14);color:var(--gold);border:1px solid rgba(247,183,49,.32);}
+
+.hdr-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:7px;padding-top:2px;}
+.expo-badge{
+  background:var(--coral);color:#fff;font-size:10.5px;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;padding:5px 14px;
+  border-radius:5px;display:inline-block;
+}
+.expo-dept{font-size:11px;color:rgba(255,255,255,.52);letter-spacing:.06em;}
+.team-id{font-family:'JetBrains Mono',monospace;font-size:23px;font-weight:700;color:var(--gold);}
+
+/* ── MAIN GRID ── */
+.main{
+  display:grid;
+  grid-template-columns:290px 1fr 1fr 1fr;
+  gap:1px;
+  background:var(--border);
+}
+.col{
+  background:var(--white);
+  padding:20px 18px;
+  display:flex;flex-direction:column;gap:15px;
+}
+
+/* last col has QR at bottom */
+.col-last{
+  background:var(--white);
+  padding:20px 18px;
+  display:flex;flex-direction:column;gap:15px;
+}
+
+.sec{
+  font-size:10.5px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:8px;display:flex;align-items:center;gap:8px;
+}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* stats */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stat{
+  background:var(--soft);border:1px solid var(--border);border-radius:10px;
+  padding:12px 6px;text-align:center;
+}
+.stat .n{font-size:30px;font-weight:900;line-height:1;color:var(--teal);}
+.stat .n.c{color:var(--coral);}
+.stat .n.g{color:var(--gold);}
+.stat .n.nv{color:var(--navy);}
+.stat .l{font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;margin-top:3px;font-weight:700;}
+
+/* about */
+.about{font-size:13px;line-height:1.8;color:#3a4a66;}
+.about b{color:var(--navy);font-weight:900;}
+
+/* arch */
+.arch{
+  background:var(--soft);border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+}
+.an{
+  background:var(--navy);color:#fff;font-family:'JetBrains Mono',monospace;
+  font-size:10px;font-weight:700;padding:5px 10px;border-radius:5px;
+}
+.an.t{background:var(--teal);}
+.an.c{background:var(--coral);}
+.an.g{background:var(--gold);color:var(--navy);}
+.arr{color:var(--gray);font-size:15px;}
+
+/* deploy */
+.deploy{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:11px 13px;}
+.dr{display:flex;align-items:center;gap:9px;margin-bottom:9px;}
+.dr:last-child{margin-bottom:0;}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.dot.g{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.6);}
+.dot.b{background:#3b82f6;box-shadow:0 0 6px rgba(59,130,246,.6);}
+.dlbl{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.07em;font-weight:700;}
+.dval{font-family:'JetBrains Mono',monospace;font-size:10px;color:#1e3a5f;font-weight:700;}
+
+/* feature cards */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fc{
+  background:var(--soft);border:1px solid var(--border);border-radius:11px;
+  padding:13px 12px 12px;border-top:3px solid var(--teal);
+}
+.fc:nth-child(2n){border-top-color:var(--coral);}
+.fc:nth-child(3n){border-top-color:var(--gold);}
+.fc:nth-child(4n){border-top-color:#7c3aed;}
+.fc:nth-child(5n){border-top-color:#0e9f6e;}
+.fc:nth-child(6n){border-top-color:var(--coral);}
+.fc:nth-child(7n){border-top-color:#0ab5ae;}
+.fc:nth-child(8n){border-top-color:#e3a008;}
+.fic{font-size:22px;margin-bottom:6px;display:block;}
+.ft{font-size:12.5px;font-weight:900;color:var(--navy);margin-bottom:3px;}
+.fd{font-size:11px;color:var(--gray);line-height:1.5;}
+
+/* steps */
+.steps{display:flex;flex-direction:column;gap:8px;}
+.step{
+  display:flex;align-items:flex-start;gap:11px;
+  background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:11px 13px;
+}
+.sn{
+  width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;
+  font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.step:nth-child(2) .sn{background:var(--teal);}
+.step:nth-child(3) .sn{background:var(--coral);}
+.step:nth-child(4) .sn{background:var(--gold);color:var(--navy);}
+.step:nth-child(5) .sn{background:#7c3aed;}
+.st{font-size:12.5px;font-weight:900;color:var(--navy);margin-bottom:2px;}
+.sd{font-size:10.5px;color:var(--gray);line-height:1.45;}
+
+/* tech grid */
+.tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ti{
+  background:var(--soft);border:1px solid var(--border);border-radius:9px;
+  padding:10px 5px;text-align:center;
+}
+.tic{font-size:22px;display:block;margin-bottom:4px;}
+.tn{font-size:10.5px;font-weight:900;color:var(--navy);}
+.tr{font-size:9px;color:var(--gray);margin-top:1px;}
+
+/* team */
+.mentor{
+  background:linear-gradient(135deg,#0d1f3c,#163460);
+  border-radius:11px;padding:13px 15px;
+  display:flex;align-items:center;gap:11px;
+}
+.mav{
+  width:46px;height:46px;border-radius:50%;background:var(--teal);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;font-weight:900;color:#fff;flex-shrink:0;
+}
+.mrl{font-size:9.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--teal);font-weight:800;}
+.mnm{font-size:15px;font-weight:900;color:#fff;line-height:1.2;margin-top:2px;}
+
+.mlist{display:flex;flex-direction:column;gap:7px;}
+.mb{
+  display:flex;align-items:center;gap:10px;
+  background:var(--soft);border:1px solid var(--border);border-radius:9px;padding:9px 11px;
+}
+.mnum{
+  width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;
+  font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.mname{font-size:12px;font-weight:900;color:var(--navy);line-height:1.2;}
+.mroll{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--gray);}
+
+/* nfr */
+.nfr{display:flex;flex-direction:column;gap:7px;}
+.nr{
+  display:flex;align-items:center;gap:9px;
+  background:var(--soft);border:1px solid var(--border);border-radius:9px;padding:9px 11px;
+}
+.ni{font-size:17px;flex-shrink:0;}
+.nt{font-size:11.5px;font-weight:900;color:var(--navy);}
+.nd{font-size:9.5px;color:var(--gray);}
+
+/* QR section at bottom of last col */
+.qr-bottom{
+  margin-top:auto;
+  background:linear-gradient(135deg,#0d1f3c,#163460);
+  border-radius:11px;padding:14px;
+  display:flex;align-items:center;gap:14px;
+}
+.qr-wrap{
+  background:var(--white);border-radius:8px;padding:7px;flex-shrink:0;
+}
+.qr-text .qt{font-size:13px;font-weight:900;color:var(--gold);margin-bottom:3px;}
+.qr-text .qs{font-size:10px;color:rgba(255,255,255,.6);line-height:1.5;}
+.qr-text .qu{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--teal);margin-top:4px;word-break:break-all;}
+
+/* ── FOOTER ── */
+.ftr{
+  background:var(--navy);padding:12px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.fl{font-size:11.5px;color:rgba(255,255,255,.45);letter-spacing:.06em;}
+.fl b{color:var(--teal);font-family:'JetBrains Mono',monospace;}
+.fc2{display:flex;gap:7px;}
+.fp{
+  font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);
+}
+.fr{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,.35);}
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="logo-circle">Kmit</div>
+      <div class="inst">
+        <b>Keshav Memorial Institute of Technology</b>
+        Department of Computer Engineering
+      </div>
+    </div>
+
+    <div class="hdr-mid">
+      <div class="proj-title"><span class="t">AI</span> Product <span class="c">Recommendation</span> System</div>
+      <div class="proj-sub">AI-Powered · Personalized · Real-Time · Full Stack</div>
+      <div class="chips">
+        <span class="chip r">React + Vite</span>
+        <span class="chip f">Flask</span>
+        <span class="chip m">MySQL</span>
+        <span class="chip a">Scikit-Learn</span>
+        <span class="chip a">SpaCy</span>
+        <span class="chip f">JWT Auth</span>
+        <span class="chip r">Vercel</span>
+        <span class="chip m">Render</span>
+      </div>
+    </div>
+
+    <div class="hdr-right">
+      <div class="expo-badge">🗓 2026 Technical Expo</div>
+      <div class="expo-dept">Dept. of Computer Engineering</div>
+      <div class="team-id">Team ID : G1198</div>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main">
+
+    <!-- COL 1: Overview + Stats + Arch + Deploy -->
+    <div class="col">
+      <div>
+        <div class="sec">Overview</div>
+        <p class="about">
+          <b>Intelligent e-commerce platform</b> using Hybrid ML — Collaborative + Content-Based Filtering + NLP search delivering real-time personalized product suggestions.
+        </p>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="n">8</div><div class="l">Features</div></div>
+        <div class="stat"><div class="n c">3</div><div class="l">AI Models</div></div>
+        <div class="stat"><div class="n nv">10</div><div class="l">DB Tables</div></div>
+        <div class="stat"><div class="n g">Live</div><div class="l">Deployed</div></div>
+      </div>
+
+      <div>
+        <div class="sec">Architecture</div>
+        <div class="arch">
+          <span class="an t">React</span><span class="arr">→</span>
+          <span class="an">Axios</span><span class="arr">→</span>
+          <span class="an c">Flask</span><span class="arr">→</span>
+          <span class="an g">ML</span><span class="arr">→</span>
+          <span class="an t">MySQL</span>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec">Deployment</div>
+        <div class="deploy">
+          <div class="dr">
+            <div class="dot g"></div>
+            <div><div class="dlbl">Frontend · Vercel</div><div class="dval">...-phi.vercel.app</div></div>
+          </div>
+          <div class="dr">
+            <div class="dot b"></div>
+            <div><div class="dlbl">Backend · Render</div><div class="dval">...-by60.onrender.com</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 2: Features -->
+    <div class="col">
+      <div class="sec">Key Features</div>
+      <div class="fgrid">
+        <div class="fc"><span class="fic">🎯</span><div class="ft">Personalized Feed</div><div class="fd">Hybrid ML recommendations based on user history.</div></div>
+        <div class="fc"><span class="fic">🔍</span><div class="ft">NLP Smart Search</div><div class="fd">Natural language search with SpaCy intent parsing.</div></div>
+        <div class="fc"><span class="fic">📈</span><div class="ft">Trending Engine</div><div class="fd">Products ranked by rating × log-reviews score.</div></div>
+        <div class="fc"><span class="fic">👗</span><div class="ft">Outfit Matching</div><div class="fd">Category-aware complementary product pairing.</div></div>
+        <div class="fc"><span class="fic">🔐</span><div class="ft">Secure Auth</div><div class="fd">JWT + bcrypt + OTP email verification.</div></div>
+        <div class="fc"><span class="fic">🛒</span><div class="ft">Cart & Wishlist</div><div class="fd">Full cart with subtotals, discounts & quick move.</div></div>
+        <div class="fc"><span class="fic">🤖</span><div class="ft">Auto Retraining</div><div class="fd">Models retrain nightly + every 20 interactions.</div></div>
+        <div class="fc"><span class="fic">💬</span><div class="ft">AI Chatbot</div><div class="fd">Occasion-aware gift & product recommendations.</div></div>
+      </div>
+    </div>
+
+    <!-- COL 3: How It Works + Tech -->
+    <div class="col">
+      <div>
+        <div class="sec">How It Works</div>
+        <div class="steps">
+          <div class="step"><div class="sn">1</div><div><div class="st">Register & OTP Verify</div><div class="sd">Sign up → OTP email → JWT token issued</div></div></div>
+          <div class="step"><div class="sn">2</div><div><div class="st">Behaviour Tracking</div><div class="sd">Searches, cart & wishlist actions logged for ML</div></div></div>
+          <div class="step"><div class="sn">3</div><div><div class="st">Hybrid ML Inference</div><div class="sd">Collaborative + Content-Based → ranked results</div></div></div>
+          <div class="step"><div class="sn">4</div><div><div class="st">NLP Search Pipeline</div><div class="sd">SpaCy intent → vector similarity → filtered output</div></div></div>
+          <div class="step"><div class="sn">5</div><div><div class="st">Auto Retrain Loop</div><div class="sd">AutoTrainer fires nightly & on interaction count</div></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="sec">Technology Stack</div>
+        <div class="tgrid">
+          <div class="ti"><span class="tic">⚛️</span><div class="tn">React+Vite</div><div class="tr">Frontend</div></div>
+          <div class="ti"><span class="tic">🐍</span><div class="tn">Flask</div><div class="tr">REST API</div></div>
+          <div class="ti"><span class="tic">🗄️</span><div class="tn">MySQL</div><div class="tr">Database</div></div>
+          <div class="ti"><span class="tic">🧠</span><div class="tn">Sklearn</div><div class="tr">ML Models</div></div>
+          <div class="ti"><span class="tic">📝</span><div class="tn">SpaCy</div><div class="tr">NLP</div></div>
+          <div class="ti"><span class="tic">▲</span><div class="tn">Vercel</div><div class="tr">FE Host</div></div>
+          <div class="ti"><span class="tic">☁️</span><div class="tn">Render</div><div class="tr">BE Host</div></div>
+          <div class="ti"><span class="tic">🔑</span><div class="tn">JWT+OTP</div><div class="tr">Auth</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 4: Team + NFR + QR at bottom -->
+    <div class="col col-last" style="display:flex;flex-direction:column;gap:15px;">
+      <div>
+        <div class="sec">Mentor & Team</div>
+        <div class="mentor">
+          <div class="mav">SL</div>
+          <div><div class="mrl">Faculty Mentor</div><div class="mnm">S. Lavanya Reddy</div></div>
+        </div>
+      </div>
+
+      <div class="mlist">
+        <div class="mb"><div class="mnum">1</div><div><div class="mname">B. Anand</div><div class="mroll">24BD1A05G5</div></div></div>
+        <div class="mb"><div class="mnum">2</div><div><div class="mname">G. Sri Charan</div><div class="mroll">24BD1A05GB</div></div></div>
+        <div class="mb"><div class="mnum">3</div><div><div class="mname">G. Praveen</div><div class="mroll">24BD1A05GG</div></div></div>
+        <div class="mb"><div class="mnum">4</div><div><div class="mname">G. Pavan</div><div class="mroll">24BD1A05GJ</div></div></div>
+        <div class="mb"><div class="mnum">5</div><div><div class="mname">V. Sriram Satvik</div><div class="mroll">24BD1A05HR</div></div></div>
+      </div>
+
+      <div>
+        <div class="sec">Non-Functional</div>
+        <div class="nfr">
+          <div class="nr"><span class="ni">⚡</span><div><div class="nt">Performance</div><div class="nd">API &lt;200ms, shared DB pool</div></div></div>
+          <div class="nr"><span class="ni">🔒</span><div><div class="nt">Security</div><div class="nd">JWT, bcrypt, OTP, CORS guard</div></div></div>
+          <div class="nr"><span class="ni">📡</span><div><div class="nt">Scalability</div><div class="nd">Modular Blueprint API</div></div></div>
+          <div class="nr"><span class="ni">🔄</span><div><div class="nt">Reliability</div><div class="nd">Fallback to trending feed</div></div></div>
+        </div>
+      </div>
+
+      <!-- QR CODE — bottom left of this col -->
+      <div class="qr-bottom" style="margin-top:auto;">
+        <div class="qr-wrap">
+          <div id="qrcode"></div>
+        </div>
+        <div class="qr-text">
+          <div class="qt">🔗 Scan for Live Demo</div>
+          <div class="qs">Point your camera to<br>visit the live project</div>
+          <div class="qu">ai-product-recommendation-<br>system-phi.vercel.app</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="ftr">
+    <div class="fl">KMIT · <b>2026 Technical Expo</b> · Dept. of Computer Engineering</div>
+    <div class="fc2">
+      <span class="fp">Personalized Feed</span>
+      <span class="fp">NLP Search</span>
+      <span class="fp">Auto Retraining</span>
+      <span class="fp">Outfit Matching</span>
+      <span class="fp">AI Chatbot</span>
+    </div>
+    <div class="fr">Team G1198 · 2025–26</div>
+  </div>
+
+</div>
+
+<script>
+new QRCode(document.getElementById("qrcode"), {
+  text: "https://ai-product-recommendation-system-phi.vercel.app/",
+  width: 110,
+  height: 110,
+  colorDark: "#0d1f3c",
+  colorLight: "#ffffff",
+  correctLevel: QRCode.CorrectLevel.H
+});
+</script>
+</body>
+</html>
