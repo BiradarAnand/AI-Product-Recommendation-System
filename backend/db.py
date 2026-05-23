@@ -1,29 +1,67 @@
-# db.py
-import os
-import threading
-from mysql.connector import pooling
+import mysql.connector
+from mysql.connector import pooling, Error
+from contextlib import contextmanager
+import logging
+
+logger = logging.getLogger(__name__)
+
+# INCREASED pool size from default to handle concurrent requests
+dbconfig = {
+    "host": os.getenv("DB_HOST", "localhost"),
+    "user": os.getenv("DB_USER", "root"),
+    "password": os.getenv("DB_PASSWORD", ""),
+    "database": os.getenv("DB_NAME", "product_db"),
+}
 
 _pool = None
-_pool_lock = threading.Lock()
 
-def _get_pool():
+def init_pool():
+    """Initialize connection pool with proper configuration"""
+    global _pool
+    _pool = pooling.MySQLConnectionPool(
+        pool_name="mypool",
+        pool_size=20,                    # INCREASED from default (5)
+        pool_reset_session=True,         # Reset session for each connection
+        autocommit=True,                 # Auto-commit transactions
+        use_pure=True,                   # Use pure Python (avoid C extension issues)
+        **dbconfig
+    )
+    logger.info("Connection pool initialized with size 20")
+
+def get_pool():
+    """Get or create the connection pool"""
     global _pool
     if _pool is None:
-        with _pool_lock:
-            if _pool is None:
-                _pool = pooling.MySQLConnectionPool(
-                    pool_name    = "app_pool",
-                    pool_size    = 2,          # 2 connections max per worker
-                    pool_reset_session = True,
-                    connection_timeout = 10,   # fail fast, don't hang
-                    host         = os.environ.get("DB_HOST"),
-                    user         = os.environ.get("DB_USER"),
-                    password     = os.environ.get("DB_PASSWORD"),
-                    database     = os.environ.get("DB_NAME"),
-                    port         = int(os.environ.get("DB_PORT", 3306))
-                )
-                print("[DB] Pool created ✓")
+        init_pool()
     return _pool
 
+@contextmanager
+def get_db_connection():
+    """
+    Context manager for database connections - ENSURES proper cleanup
+    
+    Usage:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # ... your code ...
+    """
+    connection = None
+    try:
+        connection = get_pool().get_connection()
+        yield connection
+    except Error as e:
+        logger.error(f"Database connection error: {e}")
+        if connection:
+            connection.close()
+        raise
+    finally:
+        if connection and connection.is_connected():
+            connection.close()  # ✅ GUARANTEED cleanup
+
 def get_db():
-    return _get_pool().get_connection()
+    """Legacy function - kept for backward compatibility"""
+    try:
+        return get_pool().get_connection()
+    except Error as e:
+        logger.error(f"Failed to get connection: {e}")
+        raise
