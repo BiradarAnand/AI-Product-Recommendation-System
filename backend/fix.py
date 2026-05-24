@@ -157,7 +157,7 @@ def fix_images():
         # Fallback to category-only if brand search returns nothing
         if not urls:
             fallback_query = CATEGORY_QUERIES.get(category, category)
-            print(f"         No results → trying fallback: '{fallback_query}'")
+            print(f"         No results -> trying fallback: '{fallback_query}'")
             urls = search_unsplash(fallback_query, PHOTOS_PER_GROUP)
             total_calls += 1
 

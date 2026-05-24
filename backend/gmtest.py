@@ -33,7 +33,7 @@ def test_gmail():
     if not GMAIL_APP_PASS or GMAIL_APP_PASS == "your_16_char_app_password":
         print("❌ GMAIL_APP_PASS is not set!")
         print("   Fix: Generate App Password at:")
-        print("   https://myaccount.google.com → Security → 2-Step Verification → App passwords")
+        print("   https://myaccount.google.com -> Security -> 2-Step Verification -> App passwords")
         return False
 
     if len(GMAIL_APP_PASS.replace(" ", "")) != 16:
@@ -75,8 +75,8 @@ def test_gmail():
         print("   2. Click 'Security' on the left")
         print("   3. Make sure '2-Step Verification' is ON")
         print("   4. Click '2-Step Verification'")
-        print("   5. Scroll down → 'App passwords'")
-        print("   6. Select app: 'Mail', device: 'Other' → type 'RecoVibe'")
+        print("   5. Scroll down -> 'App passwords'")
+        print("   6. Select app: 'Mail', device: 'Other' -> type 'RecoVibe'")
         print("   7. Click 'Generate'")
         print("   8. Copy the 16-character password shown (e.g. abcd efgh ijkl mnop)")
         print("   9. Use THAT as GMAIL_APP_PASS (with or without spaces)")

@@ -19,7 +19,6 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 def fetch_products(filters: dict, limit: int = 6) -> list:
     conditions = ["stock > 0"]
     params     = []
-
     if filters.get("category"):
         conditions.append("LOWER(category) LIKE %s")
         params.append(f"%{filters['category'].lower()}%")
@@ -41,70 +40,51 @@ def fetch_products(filters: dict, limit: int = 6) -> list:
         )
         kw = f"%{filters['keyword'].lower()}%"
         params.extend([kw, kw, kw])
-
     where_clause = " AND ".join(conditions)
     query = f"""
         SELECT id, name, description, category, price, stock, rating, reviews, image_url, brand
-        FROM products
-        WHERE {where_clause}
-        ORDER BY rating DESC, reviews DESC
-        LIMIT %s
+        FROM products WHERE {where_clause}
+        ORDER BY rating DESC, reviews DESC LIMIT %s
     """
     params.append(limit)
-
-    conn   = get_db()
-    cursor = conn.cursor(dictionary=True)
+    conn = None                                          # ✅ FIXED
     try:
+        conn   = get_db()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute(query, params)
-        return cursor.fetchall()
-    finally:
+        rows = cursor.fetchall()
         cursor.close()
-        conn.close()
-
-
-# ── User preference fetcher ───────────────────────────────────────────────────
-def fetch_user_context(user_id: int) -> dict:
-    conn   = get_db()
-    cursor = conn.cursor(dictionary=True)
-    try:
-        cursor.execute(
-            "SELECT search_query FROM search_history "
-            "WHERE user_id = %s ORDER BY searched_at DESC LIMIT 10",
-            (user_id,),
-        )
-        searches = [row["search_query"] for row in cursor.fetchall()]
-
-        cursor.execute(
-            "SELECT DISTINCT p.category, p.brand "
-            "FROM wishlist w JOIN products p ON w.product_id = p.id "
-            "WHERE w.user_id = %s LIMIT 10",
-            (user_id,),
-        )
-        wishlist_items = cursor.fetchall()
-        return {
-            "recent_searches":      searches,
-            "wishlist_categories":  [i["category"] for i in wishlist_items],
-            "wishlist_brands":      list({i["brand"] for i in wishlist_items}),
-        }
+        return rows
+    except Exception as e:
+        print(f"[fetch_products] error: {e}")
+        return []
     finally:
-        cursor.close()
-        conn.close()
-
-
+        if conn:                                         # ✅ FIXED
+            try: conn.close()
+            except: pass
+ 
 # ── Save chat to search history ───────────────────────────────────────────────
+
 def save_search(user_id: int, query: str):
-    conn   = get_db()
-    cursor = conn.cursor()
+    if not user_id or not query:
+        return
+    conn = None                                          # ✅ FIXED
     try:
+        conn   = get_db()
+        cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO search_history (user_id, search_query, searched_at) VALUES (%s, %s, %s)",
             (user_id, query, datetime.utcnow()),
         )
         conn.commit()
-    finally:
         cursor.close()
-        conn.close()
-
+    except Exception as e:
+        print(f"[save_search] error: {e}")
+    finally:
+        if conn:                                         # ✅ FIXED
+            try: conn.close()
+            except: pass
+ 
 
 # ── Filter extractor (Groq step 1) ────────────────────────────────────────────
 def extract_filters(user_message: str, user_context: dict) -> dict:

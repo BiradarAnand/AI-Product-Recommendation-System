@@ -115,7 +115,7 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
         return True
     except smtplib.SMTPAuthenticationError:
         print(f"[OTP SMTP] Auth failed. Check GMAIL_ADDRESS and GMAIL_APP_PASS env vars.")
-        print(f"[OTP SMTP] Use App Password (not account password): myaccount.google.com → Security → App passwords")
+        print(f"[OTP SMTP] Use App Password (not account password): myaccount.google.com -> Security -> App passwords")
         return False
     except Exception as e:
         print(f"[OTP SMTP] Failed: {e}")

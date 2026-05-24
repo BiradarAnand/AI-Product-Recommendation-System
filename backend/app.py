@@ -26,38 +26,41 @@ app = Flask(__name__)
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET", "your-jwt-secret")
 jwt = JWTManager(app)   # ✅ FIXED: initialize JWTManager properly
 
-# ✅ FIXED: Single CORS config, removed conflicting after_request override
+import re
+
+# ✅ Dynamic CORS Configuration to support localhost and any Vercel deployments
+cors_origins_patterns = [
+    r"^https?://localhost(:\d+)?$",
+    r"^https?://.*\.vercel\.app$"
+]
+env_frontend = os.environ.get("FRONTEND_URL")
+if env_frontend:
+    cors_origins_patterns.append(f"^{re.escape(env_frontend.rstrip('/'))}$")
+
+cors_origins_compiled = [re.compile(p) for p in cors_origins_patterns]
+
 CORS(
     app,
-    resources={r"/*": {"origins": [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://ai-product-recommendation-system-phi.vercel.app",
-        "https://ai-product-recommendation-sys-git-a014cc-biradaranands-projects.vercel.app",
-        "https://ai-product-recommendation-system-py98jsht0.vercel.app"
-    ]}},
+    resources={r"/*": {"origins": cors_origins_compiled}},
     supports_credentials=True,
     allow_headers=["Content-Type", "Authorization"],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
-# ✅ FIXED: after_request no longer hardcodes a single origin
-# Previously this was overriding CORS() and breaking all other origins
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin", "")
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://ai-product-recommendation-system-phi.vercel.app",
-        "https://ai-product-recommendation-sys-git-a014cc-biradaranands-projects.vercel.app",
-        "https://ai-product-recommendation-system-py98jsht0.vercel.app"
-    ]
-    if origin in allowed_origins:
-        response.headers["Access-Control-Allow-Origin"] = origin
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
+    if origin:
+        is_allowed = False
+        for pattern in cors_origins_compiled:
+            if pattern.match(origin):
+                is_allowed = True
+                break
+        if is_allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
     return response
 
 
@@ -126,7 +129,19 @@ def get_products():
             except:
                 pass
 
-
+@app.route("/test-db")
+def test_db():
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM products")
+        count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+        return {"status": "TiDB connected ✓", "products": count}
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
 @app.route("/products/<int:product_id>")
 def get_product_by_id(product_id):
     conn = None
