@@ -88,10 +88,12 @@ mail = Mail(app)
 
 print("App started — using shared DB connection pool from db.py")
 
+app.config['MAIL_TIMEOUT'] = 10  # add this line
+
 
 # ── OTP helper ────────────────────────────────────────────────────
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    return str(random.randint(1000, 9999))
 
 
 # ─────────────────────────────────────────────────────────────────

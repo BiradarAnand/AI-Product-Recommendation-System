@@ -134,8 +134,8 @@ def register():
     if err:
         return jsonify({"error": err}), 400
 
-    if len(data["password"]) < 6:
-        return jsonify({"error": "Password must be at least 6 characters."}), 400
+    if len(data["password"]) < 4:
+        return jsonify({"error": "Password must be at least 4 characters."}), 400
 
     name  = data["name"].strip()
     email = data["email"].strip().lower()
