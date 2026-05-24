@@ -283,10 +283,10 @@ export default function RecommendedProducts() {
     </section>
   );
 }
-src/components/RecommendedProducts.jsx
-Shows AI-recommended products below the hero section.
-- Logged-in users: fetches personalized recommendations from backend
-- Guests: shows top-rated products from the products endpoint
+// src/components/RecommendedProducts.jsx
+// Shows AI-recommended products below the hero section.
+// - Logged-in users: fetches personalized recommendations from backend
+// - Guests: shows top-rated products from the products endpoint
 
 // import { useEffect, useState } from "react";
 // import { useNavigate } from "react-router-dom";
