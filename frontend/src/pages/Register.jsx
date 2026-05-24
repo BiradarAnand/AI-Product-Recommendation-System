@@ -15,7 +15,7 @@ export default function Register() {
 
   const [formData, setFormData] = useState({
     name: "", email: "", password: "",
-    otp_channel: "email", // always email — hidden field
+    otp_channel: "email",
   });
 
   const [otpData, setOtpData] = useState({ user_id: null, otp: "" });
@@ -44,108 +44,92 @@ export default function Register() {
     else       { setMessage(msg); setError(""); }
   };
 
-  // ── Step 1 ──
+  // ── Step 1: Register ──────────────────────────────────────────
+  // ✅ FIXED: removed duplicate inner try-catch that caused ReferenceError on 'res'
   const handleFormSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); notify("");
+    e.preventDefault();
+    setLoading(true);
+    notify("");
+
     try {
-      // const res = await API.post("/auth/register", { ...formData, otp_channel: "email" });
-      console.log("STEP 1 START");
+      const res = await API.post("/auth/register", {
+        ...formData,
+        otp_channel: "email"
+      });
 
-try {
-  const res = await API.post("/auth/register", {
-    ...formData,
-    otp_channel: "email"
-  });
-
-  console.log("STEP 1 SUCCESS", res.data);
-
-  setOtpData({ user_id: res.data.user_id, otp: "" });
-
-  notify("OTP sent to your email. Check your inbox!");
-  setStep("otp");
-
-} catch (err) {
-
-  console.log("STEP 1 FAILED");
-
-  console.log("FULL ERROR:", err);
-
-  console.log("ERROR RESPONSE:", err.response);
-
-  console.log("ERROR DATA:", err.response?.data);
-
-  notify(err.response?.data?.error || "Registration failed", true);
-}
-
+      console.log("[REGISTER] Success:", res.data);
 
       setOtpData({ user_id: res.data.user_id, otp: "" });
-      notify("OTP sent to your email. Check your inbox!");
+      notify(
+        res.data.email_sent
+          ? "OTP sent to your email. Check your inbox!"
+          : "Account created! OTP may be delayed — check spam or contact support."
+      );
       setStep("otp");
-    } catch (err) { notify(err.response?.data?.error || "Registration failed", true); }
-    finally { setLoading(false); }
+
+    } catch (err) {
+      console.error("[REGISTER] Error:", err.response?.data || err.message);
+      notify(err.response?.data?.error || "Registration failed. Please try again.", true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Step 2 ──
+  // ── Step 2: Verify OTP ────────────────────────────────────────
+  // ✅ FIXED: removed duplicate inner try-catch that caused ReferenceError on 'res'
   const handleOtpSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); notify("");
+    e.preventDefault();
+    setLoading(true);
+    notify("");
+
     try {
-      // const res = await API.post("/auth/verify-otp", otpData);
+      const res = await API.post("/auth/verify-otp", otpData);
 
-      console.log("STEP 2 START");
-
-try {
-
-  const res = await API.post("/auth/verify-otp", otpData);
-
-  console.log("STEP 2 SUCCESS", res.data);
-
-  localStorage.setItem("token", res.data.token);
-
-  if (res.data.user) {
-    localStorage.setItem("user", JSON.stringify(res.data.user));
-  }
-
-  notify("Email verified!");
-  setStep("preferences");
-
-} catch (err) {
-
-  console.log("STEP 2 FAILED");
-
-  console.log(err);
-
-  console.log(err.response);
-
-  console.log(err.response?.data);
-
-  notify(err.response?.data?.error || "Invalid OTP", true);
-}
+      console.log("[VERIFY-OTP] Success:", res.data);
 
       localStorage.setItem("token", res.data.token);
-      if (res.data.user) localStorage.setItem("user", JSON.stringify(res.data.user));
+      if (res.data.user) {
+        localStorage.setItem("user", JSON.stringify(res.data.user));
+      }
+
       notify("Email verified! Setting up your style profile…");
       setStep("preferences");
-    } catch (err) { notify(err.response?.data?.error || "Invalid OTP", true); }
-    finally { setLoading(false); }
+
+    } catch (err) {
+      console.error("[VERIFY-OTP] Error:", err.response?.data || err.message);
+      notify(err.response?.data?.error || "Invalid OTP. Please try again.", true);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // ── Step 3 ──
+  // ── Step 3: Save Preferences ──────────────────────────────────
   const handlePrefsSubmit = async (e) => {
-    e.preventDefault(); setLoading(true); notify("");
+    e.preventDefault();
+    setLoading(true);
+    notify("");
+
     try {
       const token = localStorage.getItem("token");
-      await API.post("/user-preferences", prefs, { headers: { Authorization: `Bearer ${token}` } });
+      await API.post("/user-preferences", prefs, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       notify("All set! Taking you home…");
       setTimeout(() => { window.location.href = "/"; }, 1200);
-    } catch (err) { notify(err.response?.data?.error || "Failed to save preferences", true); }
-    finally { setLoading(false); }
+    } catch (err) {
+      notify(err.response?.data?.error || "Failed to save preferences", true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resendOtp = async () => {
     try {
       await API.post("/auth/resend-otp", { user_id: otpData.user_id });
       notify("OTP resent to your email!");
-    } catch { notify("Resend failed", true); }
+    } catch {
+      notify("Resend failed", true);
+    }
   };
 
   const currentStepIdx = STEPS.findIndex((s) => s.key === step);
@@ -230,7 +214,6 @@ try {
               className="text-xl font-black text-gray-900">
               RecoVibe<span style={{ color: "#F5C518" }}>.</span>
             </a>
-            {/* mobile step pill */}
             <span className="text-xs font-semibold px-3 py-1 rounded-full"
               style={{ background: "#F5C518", color: "#111" }}>
               Step {currentStepIdx + 1}/3
@@ -324,7 +307,10 @@ try {
             <form onSubmit={handleOtpSubmit} className="space-y-5">
               <div className="p-4 rounded-xl text-sm" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
                 <p className="font-semibold text-yellow-800 mb-1">📧 Check your inbox</p>
-                <p className="text-yellow-700 text-xs">A 6-digit OTP has been sent to <strong>{formData.email}</strong>. It expires in 10 minutes.</p>
+                <p className="text-yellow-700 text-xs">
+                  A 6-digit OTP has been sent to <strong>{formData.email}</strong>. It expires in 10 minutes.
+                  <br />If not received, check your spam folder or click Resend below.
+                </p>
               </div>
 
               <div>
@@ -333,7 +319,7 @@ try {
                   type="text" inputMode="numeric" maxLength="6"
                   placeholder="0 0 0 0 0 0"
                   value={otpData.otp}
-                  onChange={(e) => setOtpData((p) => ({ ...p, otp: e.target.value.replace(/\D/, "") }))}
+                  onChange={(e) => setOtpData((p) => ({ ...p, otp: e.target.value.replace(/\D/g, "") }))}
                   required
                   className="w-full text-center text-3xl font-mono tracking-widest py-4 rounded-xl outline-none transition-all"
                   style={{ border: "2px solid #e5e7eb", letterSpacing: "0.5em" }}
