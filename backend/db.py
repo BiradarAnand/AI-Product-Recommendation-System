@@ -13,7 +13,7 @@ def _get_pool():
             if _pool is None:
                 _pool = pooling.MySQLConnectionPool(
                     pool_name    = "app_pool",
-                    pool_size    = 10,         # ✅ FIXED: was 2, now 10
+                    pool_size    = 3,         # ✅ FIXED: was 2, now 10
                     pool_reset_session = True,
                     connection_timeout = 30,   # ✅ FIXED: was 10, now 30 (Render is slow)
                     host         = os.environ.get("DB_HOST"),
