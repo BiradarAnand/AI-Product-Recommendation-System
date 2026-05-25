@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuickView } from "./ProductQuickView";
 import axios from "axios";
 
 const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com/api" });
@@ -59,6 +60,7 @@ export default function RecommendedProducts() {
   const [addedToCart, setAddedToCart]         = useState({});
   const [addedToWishlist, setAddedToWishlist] = useState({});
 
+  const { openQuickView } = useQuickView();
   const token = localStorage.getItem("token");
 
   useEffect(() => {
@@ -210,7 +212,8 @@ export default function RecommendedProducts() {
             {products.map((product) => (
               <div
                 key={product.id}
-                className="product-card bg-white rounded-2xl shadow-sm overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300"
+                className="product-card bg-white rounded-2xl shadow-sm overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => openQuickView(product)}
               >
                 {/* Image */}
                 <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: "260px" }}>

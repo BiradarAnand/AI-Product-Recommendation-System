@@ -7,6 +7,7 @@ import Wishlist       from './pages/Wishlist';
 import ProductDetails from './pages/ProductDetails';
 import Admin          from './pages/Admin';
 import UnifiedChatbot from './pages/UnifiedChatbot';
+import { QuickViewProvider } from './components/ProductQuickView';
 
 // ── Protects routes based on role ─────────────────────────────────────────
 function ProtectedRoute({ element, allowedRoles }) {
@@ -33,31 +34,33 @@ function GuestRoute({ element }) {
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Floating chatbot — visible on every page */}
-      <UnifiedChatbot />
+      <QuickViewProvider>
+        {/* Floating chatbot — visible on every page */}
+        <UnifiedChatbot />
 
-      <Routes>
-        {/* Public routes */}
-        <Route path="/"                 element={<Home />} />
-        <Route path="/product/:id"      element={<ProductDetails />} />
-        <Route path="/occasion-chatbot" element={<Home />} />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/"                 element={<Home />} />
+          <Route path="/product/:id"      element={<ProductDetails />} />
+          <Route path="/occasion-chatbot" element={<Home />} />
 
-        {/* Guest only — redirect to home if already logged in */}
-        <Route path="/login"    element={<GuestRoute element={<Login />} />} />
-        <Route path="/register" element={<GuestRoute element={<Register />} />} />
+          {/* Guest only — redirect to home if already logged in */}
+          <Route path="/login"    element={<GuestRoute element={<Login />} />} />
+          <Route path="/register" element={<GuestRoute element={<Register />} />} />
 
-        {/* Logged-in users only */}
-        <Route path="/cart"     element={<ProtectedRoute element={<Cart />} />} />
-        <Route path="/wishlist" element={<ProtectedRoute element={<Wishlist />} />} />
+          {/* Logged-in users only */}
+          <Route path="/cart"     element={<ProtectedRoute element={<Cart />} />} />
+          <Route path="/wishlist" element={<ProtectedRoute element={<Wishlist />} />} />
 
-        {/* Admin only */}
-        <Route path="/admin"
-          element={<ProtectedRoute element={<Admin />} allowedRoles={["admin"]} />}
-        />
+          {/* Admin only */}
+          <Route path="/admin"
+            element={<ProtectedRoute element={<Admin />} allowedRoles={["admin"]} />}
+          />
 
-        {/* Catch all → home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          {/* Catch all → home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </QuickViewProvider>
     </BrowserRouter>
   );
 }
