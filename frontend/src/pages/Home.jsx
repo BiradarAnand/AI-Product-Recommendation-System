@@ -688,14 +688,30 @@ export default function Home() {
             <span className="ml-1">Wishlist</span>
           </Link>
 
-          {/* Login / Logout */}
+          {/* Login / Avatar */}
           {isLoggedIn ? (
-            <button
-              onClick={handleLogout}
-              className="text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors"
+            <Link
+              to="/profile"
+              title={user?.name || user?.email || "My Profile"}
+              style={{ textDecoration: "none" }}
             >
-              Logout
-            </button>
+              <div
+                style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: "linear-gradient(135deg, #F5C518 0%, #e6b800 100%)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontWeight: 900, fontSize: 15, color: "#111",
+                  boxShadow: "0 2px 10px rgba(245,197,24,0.4)",
+                  cursor: "pointer", flexShrink: 0,
+                  transition: "transform 0.15s, box-shadow 0.15s",
+                  fontFamily: "'Playfair Display', serif",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(245,197,24,0.5)"; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(245,197,24,0.4)"; }}
+              >
+                {(user?.name || user?.email || "?")[0].toUpperCase()}
+              </div>
+            </Link>
           ) : (
             <Link to="/login" className="text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
               Login
