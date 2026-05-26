@@ -132,3 +132,7 @@ def test_gmail():
 
 if __name__ == "__main__":
     test_gmail()
+    
+    
+import secrets
+print(secrets.token_hex(32))

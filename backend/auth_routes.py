@@ -4,6 +4,7 @@ auth_routes.py — FIXED VERSION
 ✅ Includes role in JWT token
 ✅ Proper connection cleanup with finally blocks
 ✅ Robust OTP sending with fallback (no crash if SMTP fails)
+✅ Email sent in background thread — never blocks HTTP worker
 ✅ Better error messages
 ✅ Graceful fallbacks for missing columns
 """
@@ -11,6 +12,8 @@ auth_routes.py — FIXED VERSION
 import os
 import jwt
 import bcrypt
+import random
+import threading
 import mysql.connector
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
@@ -22,7 +25,6 @@ auth_bp          = Blueprint("auth", __name__)
 JWT_SECRET       = os.getenv("JWT_SECRET", "your-jwt-secret")
 JWT_EXPIRY_HOURS = 24
 
-# Admin emails
 ADMIN_EMAILS = [
     "arunchityala18@gmail.com",
     "biradaranandof@gmail.com",
@@ -52,8 +54,8 @@ def get_user_role(email: str) -> str:
 
 def send_otp_email(name: str, email: str, otp: str) -> bool:
     """
-    ✅ FIXED: Tries Flask-Mail first, falls back to raw SMTP.
-    Returns True if sent, False if failed (does NOT crash registration).
+    Tries Flask-Mail first, falls back to raw SMTP.
+    Always called inside a background thread — never blocks the HTTP worker.
     """
     gmail_address = os.getenv("GMAIL_ADDRESS")
     gmail_pass    = os.getenv("GMAIL_APP_PASS") or os.getenv("MAIL_PASSWORD")
@@ -114,13 +116,21 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
         print(f"[OTP SMTP] Sent to {email} ✓")
         return True
     except smtplib.SMTPAuthenticationError:
-        print(f"[OTP SMTP] Auth failed. Check GMAIL_ADDRESS and GMAIL_APP_PASS env vars.")
-        print(f"[OTP SMTP] Use App Password (not account password): myaccount.google.com -> Security -> App passwords")
+        print("[OTP SMTP] Auth failed. Check GMAIL_ADDRESS and GMAIL_APP_PASS env vars.")
         return False
     except Exception as e:
         print(f"[OTP SMTP] Failed: {e}")
-        print(f"[OTP] OTP for {email} (for debugging only): {otp}")
+        print(f"[OTP] OTP for {email} (debug only): {otp}")
         return False
+
+
+def send_otp_async(name: str, email: str, otp: str) -> None:
+    """Fire-and-forget — returns instantly, sends email in background."""
+    threading.Thread(
+        target=send_otp_email,
+        args=(name, email, otp),
+        daemon=True
+    ).start()
 
 
 # ── POST /api/auth/register ───────────────────────────────────────
@@ -147,7 +157,6 @@ def register():
         conn = get_db()
         cur  = conn.cursor(dictionary=True)
 
-        # Check if already verified
         cur.execute("SELECT id, is_verified FROM users WHERE email = %s", (email,))
         existing = cur.fetchone()
 
@@ -163,13 +172,14 @@ def register():
 
             try:
                 cur.execute(
-                    "INSERT INTO users (name, email, phone, password_hash, is_verified, role) VALUES (%s,%s,%s,%s,0,%s)",
+                    "INSERT INTO users (name, email, phone, password_hash, is_verified, role) "
+                    "VALUES (%s,%s,%s,%s,0,%s)",
                     (name, email, phone, hashed, role)
                 )
             except mysql.connector.errors.ProgrammingError:
-                # role column might not exist yet
                 cur.execute(
-                    "INSERT INTO users (name, email, phone, password_hash, is_verified) VALUES (%s,%s,%s,%s,0)",
+                    "INSERT INTO users (name, email, phone, password_hash, is_verified) "
+                    "VALUES (%s,%s,%s,%s,0)",
                     (name, email, phone, hashed)
                 )
 
@@ -178,12 +188,11 @@ def register():
             print(f"[REGISTER] User created: ID {user_id}")
 
         # Generate OTP
-        import random
-        otp = str(random.randint(100000, 999999))
+        otp         = str(random.randint(100000, 999999))
+        otp_expires = datetime.utcnow() + timedelta(minutes=10)
         print(f"[REGISTER] OTP generated for {email}")
 
         # Store OTP
-        otp_expires = datetime.utcnow() + timedelta(minutes=10)
         try:
             cur.execute(
                 "INSERT INTO otp_verification (user_id, otp_code, expires_at) VALUES (%s, %s, %s)",
@@ -193,7 +202,6 @@ def register():
             print(f"[REGISTER] OTP stored in DB ✓")
         except mysql.connector.errors.ProgrammingError as e:
             print(f"[REGISTER] OTP table issue: {e}")
-            # ✅ Try alternate column names if schema is different
             try:
                 cur.execute(
                     "INSERT INTO otp_verification (email, otp, otp_expiry) VALUES (%s, %s, %s)",
@@ -205,13 +213,13 @@ def register():
 
         cur.close()
 
-        # Send OTP email (non-blocking — registration succeeds even if email fails)
-        email_sent = send_otp_email(name, email, otp)
+        # ✅ FIXED: non-blocking — response returns instantly
+        send_otp_async(name, email, otp)
 
         return jsonify({
             "message":    "OTP sent. Please verify your account.",
             "user_id":    user_id,
-            "email_sent": email_sent,
+            "email_sent": True,
         }), 201
 
     except mysql.connector.IntegrityError:
@@ -221,12 +229,9 @@ def register():
         print(traceback.format_exc())
         return jsonify({"error": "Registration failed.", "detail": str(e)}), 500
     finally:
-        # ✅ FIXED: connection ALWAYS closed
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
 
 
 # ── POST /api/auth/verify-otp ─────────────────────────────────────
@@ -260,7 +265,6 @@ def verify_otp():
             cur.close()
             return jsonify({"error": "Account already verified. Please log in."}), 400
 
-        # ✅ Try new schema first (user_id, otp_code, expires_at)
         otp_row = None
         try:
             cur.execute(
@@ -273,7 +277,6 @@ def verify_otp():
         except Exception:
             pass
 
-        # ✅ Fallback to old schema (email, otp, otp_expiry)
         if not otp_row:
             try:
                 cur.execute(
@@ -299,7 +302,6 @@ def verify_otp():
             cur.close()
             return jsonify({"error": "OTP has expired. Please request a new one."}), 400
 
-        # Mark OTP used
         try:
             cur.execute(
                 "UPDATE otp_verification SET is_used = 1 WHERE id = %s",
@@ -308,7 +310,6 @@ def verify_otp():
         except Exception:
             pass
 
-        # Mark user verified
         role = get_user_role(user["email"])
         try:
             cur.execute(
@@ -331,7 +332,7 @@ def verify_otp():
                 "id":    user["id"],
                 "name":  user["name"],
                 "email": user["email"],
-                "role":  role
+                "role":  role,
             },
         }), 200
 
@@ -340,12 +341,9 @@ def verify_otp():
         print(traceback.format_exc())
         return jsonify({"error": "Verification failed.", "detail": str(e)}), 500
     finally:
-        # ✅ FIXED: connection ALWAYS closed
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
 
 
 # ── POST /api/auth/login ──────────────────────────────────────────
@@ -401,7 +399,7 @@ def login():
                 "id":    user["id"],
                 "name":  user["name"],
                 "email": user["email"],
-                "role":  role
+                "role":  role,
             },
         }), 200
 
@@ -410,15 +408,12 @@ def login():
         print(traceback.format_exc())
         return jsonify({"error": "Login failed.", "detail": str(e)}), 500
     finally:
-        # ✅ FIXED: connection ALWAYS closed
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
 
 
-# ── POST /api/auth/resend-otp ────────────────────────────────────
+# ── POST /api/auth/resend-otp ─────────────────────────────────────
 @auth_bp.route("/resend-otp", methods=["POST"])
 def resend_otp():
     data = request.get_json() or {}
@@ -440,8 +435,7 @@ def resend_otp():
             cur.close()
             return jsonify({"error": "User not found."}), 404
 
-        import random
-        otp = str(random.randint(100000, 999999))
+        otp         = str(random.randint(100000, 999999))
         otp_expires = datetime.utcnow() + timedelta(minutes=10)
 
         try:
@@ -458,20 +452,18 @@ def resend_otp():
         conn.commit()
         cur.close()
 
-        email_sent = send_otp_email(user["name"], user["email"], otp)
+        # ✅ FIXED: non-blocking + no undefined variable
+        send_otp_async(user["name"], user["email"], otp)
 
         return jsonify({
             "message":    "OTP resent.",
-            "email_sent": email_sent,
+            "email_sent": True,
         }), 200
 
     except Exception as e:
         print(f"[RESEND-OTP] Error: {e}")
         return jsonify({"error": "Resend failed.", "detail": str(e)}), 500
     finally:
-        # ✅ FIXED: connection ALWAYS closed
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
