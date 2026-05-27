@@ -54,20 +54,24 @@ def get_user_role(email: str) -> str:
 
 def send_otp_email(name: str, email: str, otp: str) -> bool:
     """
-    Tries Flask-Mail first, falls back to raw SMTP.
-    Always called inside a background thread — never blocks the HTTP worker.
+    Send OTP via raw SMTP only. No Flask-Mail, no app context needed.
+    Requires GMAIL_ADDRESS and GMAIL_APP_PASS in .env
     """
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+
     gmail_address = os.getenv("GMAIL_ADDRESS")
     gmail_pass    = os.getenv("GMAIL_APP_PASS") or os.getenv("MAIL_PASSWORD")
 
     if not gmail_address or not gmail_pass:
-        print(f"[OTP] WARNING: Gmail credentials not set. OTP for {email} is: {otp}")
+        print(f"[OTP] WARNING: Credentials not set. OTP for {email}: {otp}")
         return False
 
     html_body = f"""
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;
                 padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-        <h2 style="color:#1f2937;">Your OTP Code</h2>
+        <h2 style="color:#1f2937;">Your OTP Code — RecoVibe</h2>
         <p>Hi {name}, use this code to verify your account:</p>
         <div style="font-size:40px;font-weight:bold;letter-spacing:14px;
                     text-align:center;padding:24px;background:#f9fafb;
@@ -77,34 +81,14 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
         </p>
     </div>"""
 
-    # ── Try Flask-Mail first ──────────────────────────────────────
     try:
-        from flask_mail import Message, Mail
-        from flask import current_app
-        mail = Mail(current_app)
-        msg = Message(
-            subject="Your OTP Code — RecoVibe",
-            sender=gmail_address,
-            recipients=[email]
-        )
-        msg.html = html_body
-        mail.send(msg)
-        print(f"[OTP Flask-Mail] Sent to {email} ✓")
-        return True
-    except Exception as e:
-        print(f"[OTP Flask-Mail] Failed ({e}), trying SMTP fallback...")
-
-    # ── Fallback: raw SMTP ────────────────────────────────────────
-    try:
-        import smtplib
-        from email.mime.text import MIMEText
-        from email.mime.multipart import MIMEMultipart
-
-        msg = MIMEMultipart("alternative")
+        msg            = MIMEMultipart("alternative")
         msg["Subject"] = "Your OTP Code — RecoVibe"
         msg["From"]    = gmail_address
         msg["To"]      = email
-        msg.attach(MIMEText(f"Your OTP is: {otp}. Expires in 10 minutes.", "plain"))
+        msg.attach(MIMEText(
+            f"Hi {name}, your OTP is: {otp}. Expires in 10 minutes.", "plain"
+        ))
         msg.attach(MIMEText(html_body, "html"))
 
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
@@ -115,14 +99,16 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
 
         print(f"[OTP SMTP] Sent to {email} ✓")
         return True
+
     except smtplib.SMTPAuthenticationError:
-        print("[OTP SMTP] Auth failed. Check GMAIL_ADDRESS and GMAIL_APP_PASS env vars.")
+        print("[OTP SMTP] Auth failed — use an App Password, not your Gmail password.")
+        print("           Generate at: myaccount.google.com → Security → App passwords")
+        print(f"[OTP] DEBUG OTP for {email}: {otp}")
         return False
     except Exception as e:
         print(f"[OTP SMTP] Failed: {e}")
-        print(f"[OTP] OTP for {email} (debug only): {otp}")
+        print(f"[OTP] DEBUG OTP for {email}: {otp}")
         return False
-
 
 def send_otp_async(name: str, email: str, otp: str) -> None:
     """Fire-and-forget — returns instantly, sends email in background."""
@@ -145,7 +131,7 @@ def register():
         return jsonify({"error": err}), 400
 
     if len(data["password"]) < 4:
-        return jsonify({"error": "Password must be at least 4 characters."}), 400
+        return jsonify({"error": "Password must be at least 6 characters."}), 400
 
     name  = data["name"].strip()
     email = data["email"].strip().lower()
