@@ -50,55 +50,39 @@ def validate_fields(data: dict, required: list):
 
 def get_user_role(email: str) -> str:
     return "admin" if email.lower() in [e.lower() for e in ADMIN_EMAILS] else "user"
-
 def send_otp_email(name: str, email: str, otp: str) -> bool:
-    import urllib.request, urllib.error, json
+    import resend
 
     api_key = os.getenv("RESEND_API_KEY", "")
     if not api_key:
         print(f"[OTP] RESEND_API_KEY not set. DEBUG OTP: {otp}")
         return False
 
-    payload = json.dumps({
-        "from":    "RecoVibe <onboarding@resend.dev>",
-        "to":      [email],
-        "subject": "Your OTP Code — RecoVibe",
-        "html": f"""
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;
-                    padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-            <h2 style="color:#1f2937;">Your OTP Code</h2>
-            <p>Hi {name}, use this code to verify your account:</p>
-            <div style="font-size:40px;font-weight:bold;letter-spacing:14px;
-                        text-align:center;padding:24px;background:#f9fafb;
-                        border-radius:8px;color:#1f2937;">{otp}</div>
-            <p style="color:#9ca3af;font-size:13px;margin-top:20px;">
-                Expires in 10 minutes. Do not share with anyone.
-            </p>
-        </div>"""
-    }).encode("utf-8")
+    resend.api_key = api_key
 
     try:
-        req = urllib.request.Request(
-            "https://api.resend.com/emails",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type":  "application/json",
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=15) as res:
-            result = json.loads(res.read().decode())
-        print(f"[OTP Resend] Sent to {email} ✓ id={result.get('id')}")
+        r = resend.Emails.send({
+            "from":    "RecoVibe <onboarding@resend.dev>",
+            "to":      [email],
+            "subject": "Your OTP Code — RecoVibe",
+            "html": f"""
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;
+                        padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
+                <h2 style="color:#1f2937;">Your OTP Code</h2>
+                <p>Hi {name}, use this code to verify your account:</p>
+                <div style="font-size:40px;font-weight:bold;letter-spacing:14px;
+                            text-align:center;padding:24px;background:#f9fafb;
+                            border-radius:8px;color:#1f2937;">{otp}</div>
+                <p style="color:#9ca3af;font-size:13px;margin-top:20px;">
+                    Expires in 10 minutes. Do not share with anyone.
+                </p>
+            </div>"""
+        })
+        print(f"[OTP Resend SDK] Sent to {email} ✓ id={r.get('id')}")
         return True
 
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        print(f"[OTP Resend] HTTP {e.code}: {body}")
-        print(f"[OTP] DEBUG OTP: {otp}")
-        return False
     except Exception as e:
-        print(f"[OTP Resend] Failed: {e}")
+        print(f"[OTP Resend SDK] Failed: {e}")
         print(f"[OTP] DEBUG OTP: {otp}")
         return False
     
