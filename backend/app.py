@@ -78,13 +78,13 @@ app.register_blueprint(admin_bp,       url_prefix="/api/admin")
 load_engine()
 start_auto_trainer()
 
-# ── Mail config ───────────────────────────────────────────────────
-app.config['MAIL_SERVER']   = 'smtp.gmail.com'
-app.config['MAIL_PORT']     = 587
-app.config['MAIL_USE_TLS']  = True
-app.config['MAIL_USERNAME'] = os.environ.get('GMAIL_ADDRESS', 'biradaranand025@gmail.com')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASS')
-mail = Mail(app)
+# # ── Mail config ───────────────────────────────────────────────────
+# app.config['MAIL_SERVER']   = 'smtp.gmail.com'
+# app.config['MAIL_PORT']     = 587
+# app.config['MAIL_USE_TLS']  = True
+# app.config['MAIL_USERNAME'] = os.environ.get('GMAIL_ADDRESS', 'biradaranand025@gmail.com')
+# app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD') or os.environ.get('GMAIL_APP_PASS')
+# mail = Mail(app)
 
 print("App started — using shared DB connection pool from db.py")
 
