@@ -24,7 +24,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import formataddr
 from dotenv import load_dotenv
-
+import ssl
 load_dotenv()
 
 # ── Brevo SMTP config ─────────────────────────────────────────────
@@ -35,6 +35,7 @@ SMTP_PASSWORD  = os.getenv("BREVO_SMTP_PASSWORD", "")   # SMTP key from Brevo da
 MAIL_FROM_NAME = os.getenv("MAIL_FROM_NAME",  "recovibe")
 MAIL_FROM_EMAIL= os.getenv("MAIL_FROM_EMAIL", SMTP_LOGIN)
 
+context = ssl.create_default_context()
 
 def send_otp_email(name: str, email: str, otp: str) -> bool:
     """
@@ -190,15 +191,13 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
 
     # ── Send via Brevo SMTP (STARTTLS on port 587) ────────────────
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
+       with smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=20) as server:
             server.ehlo()
             server.login(SMTP_LOGIN, SMTP_PASSWORD)
             server.sendmail(MAIL_FROM_EMAIL, [email], msg.as_string())
 
-        print(f"[OTP Brevo] Sent to {email} ✓")
-        return True
+            print(f"[OTP Brevo] Sent to {email} ✓")
+            return True
 
     except smtplib.SMTPAuthenticationError:
         print(
@@ -260,9 +259,7 @@ def test_connection() -> bool:
         return False
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=20) as server:
-            server.ehlo()
-            server.starttls()
+        with smtplib.SMTP_SSL(SMTP_HOST, 465, context=context, timeout=20) as server:
             server.ehlo()
             server.login(SMTP_LOGIN, SMTP_PASSWORD)
             print("  Connection OK ✓")
