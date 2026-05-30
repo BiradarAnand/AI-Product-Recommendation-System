@@ -335,6 +335,20 @@ def unified_chat():
 
     # ── CLARIFY / GENERAL path ────────────────────────────────────────
     if not occasion or confidence < OCCASION_CONFIDENCE_THRESHOLD:
+        lower_msg = message.lower()
+        if any(k in lower_msg for k in ["purpose", "occasion", "what should i wear", "help me decide"]):
+            return jsonify({
+                "type":  "clarify",
+                "reply": "I can certainly help you find outfits based on your purpose! What specific occasion are you dressing for? (e.g. gym, office, date night)",
+                "occasions": [
+                    {"key": k, "label": OCCASION_LABELS[k], "icon": OCCASION_ICONS[k]}
+                    for k in OCCASION_CATEGORIES
+                ],
+                "products": [],
+                "outfit":   {},
+                "nlp":      nlp_meta,
+            })
+
         try:
             filters  = extract_filters(message, user_context)
             products = fetch_general_products(filters, limit=6)

@@ -299,10 +299,13 @@ def _cosine_rerank(rows: list, purpose_query: str,
             print(f"[OccasionEngine] cosine error: {e}")
             cos_norm = np.zeros(n)
     else:
-        cos_norm  = np.zeros(n)
-        w_rating  = w_rating + w_cosine * 0.6
-        w_review  = w_review + w_cosine * 0.4
-        w_cosine  = 0.0
+        # Fallback: Naive word overlap if model is missing
+        query_words = set(purpose_query.lower().split())
+        overlap_scores = []
+        for r in rows:
+            text_words = set(_row_to_text(r).split())
+            overlap_scores.append(len(query_words.intersection(text_words)))
+        cos_norm  = _norm(np.array(overlap_scores, dtype=float))
 
     final = (w_cosine * cos_norm + w_cat * cat_score +
              w_rating * r_norm   + w_review * rv_norm)
