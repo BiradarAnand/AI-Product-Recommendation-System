@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
@@ -18,7 +18,11 @@ export default function Register() {
     otp_channel: "email",
   });
 
-  const [otpData, setOtpData] = useState({ user_id: null, otp: "" });
+  const [otpData, setOtpData]     = useState({ user_id: null, otp: "" });
+  const [digits, setDigits]        = useState(Array(6).fill(""));
+  const [resendCooldown, setResendCooldown] = useState(0); // seconds remaining
+  const digitRefs                  = useRef([]);
+  const cooldownRef                = useRef(null);
 
   const [prefs, setPrefs] = useState({
     gender: "unisex", age_group: "young_adult",
@@ -60,12 +64,15 @@ export default function Register() {
       console.log("[REGISTER] Success:", res.data);
 
       setOtpData({ user_id: res.data.user_id, otp: "" });
+      setDigits(Array(6).fill(""));
       notify(
         res.data.email_sent
           ? "OTP sent to your email. Check your inbox!"
           : "Account created! OTP may be delayed — check spam or contact support."
       );
       setStep("otp");
+      startCooldown(60);
+      setTimeout(() => digitRefs.current[0]?.focus(), 100);
 
     } catch (err) {
       console.error("[REGISTER] Error:", err.response?.data || err.message);
@@ -123,12 +130,61 @@ export default function Register() {
     }
   };
 
+  // ── Countdown timer helpers ───────────────────────────────────
+  const startCooldown = useCallback((seconds = 60) => {
+    setResendCooldown(seconds);
+    clearInterval(cooldownRef.current);
+    cooldownRef.current = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) { clearInterval(cooldownRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => () => clearInterval(cooldownRef.current), []);
+
+  // ── Individual digit handlers ─────────────────────────────────
+  const handleDigitChange = (idx, val) => {
+    const digit = val.replace(/\D/g, "").slice(-1);
+    const next  = [...digits];
+    next[idx]   = digit;
+    setDigits(next);
+    const joined = next.join("");
+    setOtpData((p) => ({ ...p, otp: joined }));
+    if (digit && idx < 5) digitRefs.current[idx + 1]?.focus();
+  };
+
+  const handleDigitKeyDown = (idx, e) => {
+    if (e.key === "Backspace" && !digits[idx] && idx > 0) {
+      digitRefs.current[idx - 1]?.focus();
+    }
+    if (e.key === "ArrowLeft"  && idx > 0) digitRefs.current[idx - 1]?.focus();
+    if (e.key === "ArrowRight" && idx < 5) digitRefs.current[idx + 1]?.focus();
+  };
+
+  const handleDigitPaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const next   = Array(6).fill("");
+    [...pasted].forEach((ch, i) => { next[i] = ch; });
+    setDigits(next);
+    setOtpData((p) => ({ ...p, otp: pasted }));
+    const focusIdx = Math.min(pasted.length, 5);
+    digitRefs.current[focusIdx]?.focus();
+  };
+
   const resendOtp = async () => {
+    if (resendCooldown > 0) return;
     try {
       await API.post("/auth/resend-otp", { user_id: otpData.user_id });
-      notify("OTP resent to your email!");
+      notify("OTP resent! Check your inbox.");
+      setDigits(Array(6).fill(""));
+      setOtpData((p) => ({ ...p, otp: "" }));
+      digitRefs.current[0]?.focus();
+      startCooldown(60);
     } catch {
-      notify("Resend failed", true);
+      notify("Resend failed. Please try again.", true);
     }
   };
 
@@ -305,38 +361,74 @@ export default function Register() {
           {/* ── STEP 2: OTP ── */}
           {step === "otp" && (
             <form onSubmit={handleOtpSubmit} className="space-y-5">
+              {/* Info banner */}
               <div className="p-4 rounded-xl text-sm" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
                 <p className="font-semibold text-yellow-800 mb-1">📧 Check your inbox</p>
                 <p className="text-yellow-700 text-xs">
-                  A 6-digit OTP has been sent to <strong>{formData.email}</strong>. It expires in 10 minutes.
-                  <br />If not received, check your spam folder or click Resend below.
+                  A 6-digit OTP was sent to <strong>{formData.email}</strong>. It expires in 10 minutes.
+                  <br />Not received? Check your spam folder or click Resend below.
                 </p>
               </div>
 
+              {/* 6 individual digit boxes */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-3">Enter OTP</label>
-                <input
-                  type="text" inputMode="numeric" maxLength="6"
-                  placeholder="0 0 0 0 0 0"
-                  value={otpData.otp}
-                  onChange={(e) => setOtpData((p) => ({ ...p, otp: e.target.value.replace(/\D/g, "") }))}
-                  required
-                  className="w-full text-center text-3xl font-mono tracking-widest py-4 rounded-xl outline-none transition-all"
-                  style={{ border: "2px solid #e5e7eb", letterSpacing: "0.5em" }}
-                  onFocus={onFocus} onBlur={onBlur}
-                />
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Enter 6-digit OTP
+                </label>
+                <div className="flex gap-2 justify-between" onPaste={handleDigitPaste}>
+                  {digits.map((d, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (digitRefs.current[idx] = el)}
+                      id={`otp-digit-${idx}`}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={d}
+                      onChange={(e) => handleDigitChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleDigitKeyDown(idx, e)}
+                      required={idx === 0}
+                      className="flex-1 text-center text-2xl font-mono font-bold py-4 rounded-xl outline-none transition-all"
+                      style={{
+                        border: d ? "2px solid #111" : "2px solid #e5e7eb",
+                        background: d ? "#f9fafb" : "#fff",
+                        minWidth: 0,
+                      }}
+                      onFocus={(e) => (e.target.style.borderColor = "#F5C518")}
+                      onBlur={(e)  => (e.target.style.borderColor = d ? "#111" : "#e5e7eb")}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2 text-center">
+                  Tip: you can paste the 6-digit code directly
+                </p>
               </div>
 
-              <button type="submit" disabled={loading}
+              <button
+                type="submit"
+                disabled={loading || otpData.otp.length < 6}
                 className="w-full py-3.5 rounded-xl font-bold text-sm transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50"
-                style={{ background: "#111", color: "#fff" }}>
+                style={{ background: "#111", color: "#fff" }}
+              >
                 {loading ? "Verifying…" : "Verify Email →"}
               </button>
 
+              {/* Resend with cooldown */}
               <p className="text-center text-sm text-gray-500">
                 Didn't receive it?{" "}
-                <button type="button" onClick={resendOtp}
-                  className="font-bold text-gray-900 hover:underline">Resend OTP</button>
+                {resendCooldown > 0 ? (
+                  <span className="font-medium text-gray-400">
+                    Resend in <span style={{ color: "#F5C518", fontWeight: 700 }}>{resendCooldown}s</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={resendOtp}
+                    className="font-bold text-gray-900 hover:underline"
+                  >
+                    Resend OTP
+                  </button>
+                )}
               </p>
             </form>
           )}

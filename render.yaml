@@ -1,0 +1,57 @@
+# render.yaml — RecoVibe Deployment Configuration
+# ─────────────────────────────────────────────────
+# This file tells Render exactly how to build and run the backend.
+# Push this file to GitHub; Render will detect it automatically.
+#
+# Render docs: https://render.com/docs/render-yaml-reference
+
+services:
+  - type: web
+    name: recovibe-backend
+    runtime: python
+    rootDir: backend
+
+    # ── Build ──────────────────────────────────────────────────────
+    # 1. Install Node.js packages for the Nodemailer subprocess script
+    # 2. Install Python packages
+    buildCommand: |
+      cd mailer && npm install --omit=dev && cd ..
+      pip install -r requirements.txt
+
+    # ── Start ──────────────────────────────────────────────────────
+    startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120
+
+    # ── Environment ────────────────────────────────────────────────
+    envVars:
+      # Set these in the Render dashboard → Environment tab
+      # (Never commit real secrets to GitHub)
+      - key: GMAIL_USER
+        sync: false          # set manually in dashboard
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: RecoVibe
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: UNSPLASH_ACCESS_KEY
+        sync: false
+
+    # ── Health check ───────────────────────────────────────────────
+    healthCheckPath: /health
+
+    # ── Auto-deploy on push ────────────────────────────────────────
+    autoDeploy: true
