@@ -62,11 +62,11 @@ export default function Wishlist() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-gray-900">Your Wishlist</h1>
-          <Link to="/" className="text-indigo-600 hover:underline">← Back to shop</Link>
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900">Your Wishlist</h1>
+          <Link to="/" className="text-indigo-600 hover:underline text-sm">← Back to shop</Link>
         </div>
 
         {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}

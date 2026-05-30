@@ -150,14 +150,14 @@ export default function StyleQuiz({ onProductClick }) {
   const step = STEPS[currentStep];
 
   return (
-    <section style={{ padding: "64px 40px", background: "#fff" }}>
+    <section className="px-4 md:px-10 py-12 md:py-16 bg-white">
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
 
         {/* Entry state */}
         {!started && (
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, fontWeight: 900, color: "#111", margin: "0 0 10px" }}>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(24px, 5vw, 34px)", fontWeight: 900, color: "#111", margin: "0 0 10px" }}>
               Find Your Perfect Style
             </h2>
             <p style={{ fontSize: 15, color: "#888", margin: "0 0 32px", lineHeight: 1.7 }}>
@@ -190,7 +190,7 @@ export default function StyleQuiz({ onProductClick }) {
               </h2>
               <p style={{ fontSize: 13, color: "#bbb", margin: 0 }}>Step {currentStep + 1} of {STEPS.length}</p>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-[14px]">
               {step.options.map(opt => (
                 <button
                   key={opt.value}
@@ -246,7 +246,7 @@ export default function StyleQuiz({ onProductClick }) {
             {results.length === 0 ? (
               <p style={{ textAlign: "center", color: "#aaa" }}>No exact matches — try adjusting your budget or style.</p>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 24 }}>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-[14px] mb-6">
                 {results.map(p => (
                   <ResultCard key={p.id} product={p} onProductClick={onProductClick} />
                 ))}

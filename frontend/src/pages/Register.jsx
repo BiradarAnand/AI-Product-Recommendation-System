@@ -262,7 +262,7 @@ export default function Register() {
         </div>
 
         {/* ── MAIN FORM PANEL ── */}
-        <div className="lg:col-span-2 bg-white flex flex-col justify-center p-10 lg:p-12">
+        <div className="lg:col-span-2 bg-white flex flex-col justify-center p-6 md:p-10 lg:p-12">
 
           {/* mobile logo */}
           <div className="lg:hidden mb-6 flex items-center justify-between">
@@ -436,7 +436,7 @@ export default function Register() {
           {/* ── STEP 3: PREFERENCES ── */}
           {step === "preferences" && (
             <form onSubmit={handlePrefsSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { label: "Gender", name: "gender", opts: [["unisex","Unisex"],["male","Male"],["female","Female"]] },
                   { label: "Age Group", name: "age_group", opts: [["teen","Teen (13-19)"],["young_adult","Young Adult (20-35)"],["adult","Adult (36-55)"],["senior","Senior (55+)"]] },

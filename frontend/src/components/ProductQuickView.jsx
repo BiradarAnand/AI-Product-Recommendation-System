@@ -318,7 +318,7 @@ function QuickViewModal() {
               ✕
             </button>
 
-            <div style={{ padding: "24px 28px 32px", display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
+            <div className="p-4 sm:p-7" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
               <style>{`@media(min-width:640px){.qv-grid{grid-template-columns:1fr 1fr !important;}}`}</style>
               <div className="qv-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
 
@@ -326,7 +326,7 @@ function QuickViewModal() {
                 <div>
                   <div
                     className={`qv-img-wrap ${imageZoom ? "zoomed" : ""}`}
-                    style={{ height: 340 }}
+                    style={{ height: "clamp(240px, 40vh, 340px)" }}
                     onClick={() => setImageZoom(z => !z)}
                   >
                     {!imgLoaded && (

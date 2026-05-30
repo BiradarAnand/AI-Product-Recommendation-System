@@ -169,7 +169,7 @@ export default function RecommendedProducts() {
   // ── Skeleton loader ───────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="px-10 py-16">
+      <div className="px-4 md:px-10 py-10 md:py-16">
         <div className="max-w-[1400px] mx-auto">
           <div className="text-center mb-10">
             <div className="h-10 bg-gray-200 rounded w-64 mx-auto mb-3 animate-pulse"></div>
@@ -194,12 +194,12 @@ export default function RecommendedProducts() {
   }
 
   return (
-    <section className="px-10 py-16 bg-white">
+    <section className="px-4 md:px-10 py-10 md:py-16 bg-white">
       <div className="max-w-[1400px] mx-auto">
 
         {/* Header */}
         <div className="text-center mb-10">
-          <h2 className="font-display text-4xl font-black text-gray-900">{title}</h2>
+          <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">{title}</h2>
           <p className="text-gray-500 mt-3 text-base">{subtitle}</p>
         </div>
 

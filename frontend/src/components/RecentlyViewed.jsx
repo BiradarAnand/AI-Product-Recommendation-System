@@ -59,7 +59,7 @@ export default function RecentlyViewed({ onProductClick }) {
   const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
 
   return (
-    <section style={{ padding: "48px 40px 40px", background: "#fafaf8" }}>
+    <section className="px-4 md:px-10 py-10 md:py-12 bg-gray-50">
       <style>{`
         .rv-scroll::-webkit-scrollbar { height: 4px; }
         .rv-scroll::-webkit-scrollbar-track { background: #f0f0ee; border-radius: 2px; }

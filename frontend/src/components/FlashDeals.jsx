@@ -149,7 +149,7 @@ export default function FlashDeals({ onProductClick }) {
   };
 
   return (
-    <section style={{ padding: "48px 40px", background: "#111", position: "relative", overflow: "hidden" }}>
+    <section style={{ background: "#111", position: "relative", overflow: "hidden" }} className="px-4 md:px-10 py-10 md:py-12">
       <style>{`
         @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:0.6} }
         .fd-scroll::-webkit-scrollbar { display: none; }
@@ -161,7 +161,7 @@ export default function FlashDeals({ onProductClick }) {
 
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{
               background: "#F5C518", color: "#111",

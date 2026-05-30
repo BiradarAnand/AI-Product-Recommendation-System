@@ -28,7 +28,7 @@ export default function BrandShowcase({ onBrandSelect }) {
   };
 
   return (
-    <section style={{ padding: "56px 40px", background: "#fff", borderTop: "1px solid #f0f0ee" }}>
+    <section className="px-4 md:px-10 py-10 md:py-14 bg-white border-t border-gray-100">
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
 
         {/* Header */}
@@ -41,7 +41,7 @@ export default function BrandShowcase({ onBrandSelect }) {
           }}>
             Top Brands
           </span>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 900, color: "#111", margin: "0 0 6px" }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(22px, 4vw, 32px)", fontWeight: 900, color: "#111", margin: "0 0 6px" }}>
             Shop by Brand
           </h2>
           <p style={{ fontSize: 14, color: "#bbb", margin: 0 }}>
@@ -50,7 +50,7 @@ export default function BrandShowcase({ onBrandSelect }) {
         </div>
 
         {/* Brand grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 14, marginBottom: selected ? 28 : 0 }}>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-[14px]" style={{ marginBottom: selected ? 28 : 0 }}>
           {BRANDS.map(brand => {
             const isSelected = selected?.name === brand.name;
             const isHovered  = hovered === brand.name;

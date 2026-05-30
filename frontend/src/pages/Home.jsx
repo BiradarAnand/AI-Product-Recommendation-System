@@ -155,7 +155,7 @@ function SectionPage({
     <div className="min-h-screen bg-gray-50">
       {/* Section hero banner */}
       <div
-        className="px-10 py-14 text-center"
+        className="px-4 md:px-10 py-10 md:py-14 text-center"
         style={{
           background: sectionKey === "sale"
             ? "linear-gradient(135deg,#111 0%,#1f1f1f 100%)"
@@ -164,7 +164,7 @@ function SectionPage({
         }}
       >
         <h1
-          className="font-display text-5xl font-black mb-3"
+          className="font-display text-3xl md:text-5xl font-black mb-3"
           style={{ color: sectionKey === "sale" ? "#F5C518" : "#111" }}
         >
           {title}
@@ -176,7 +176,7 @@ function SectionPage({
       </div>
 
       {/* Grid */}
-      <section className="px-10 py-12">
+      <section className="px-4 md:px-10 py-8 md:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto">
           {visible.map((product, idx) => {
             const badgeInfo = badge(product);
@@ -312,6 +312,7 @@ export default function Home() {
   const [showHistory, setShowHistory]       = useState(false);
   const [searchHistory, setSearchHistory]   = useState([]);
   const searchRef                           = useRef(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // ── Inject fonts ──
   useEffect(() => {
@@ -506,197 +507,127 @@ export default function Home() {
     <div className="bg-gray-50 min-h-screen">
 
       {/* ── NAVBAR ── */}
-      <nav className="sticky top-0 z-50 flex items-center justify-between px-10 py-4 bg-white/95 backdrop-blur-sm shadow-sm">
-        <a href="/" className="font-display text-2xl font-black tracking-tight text-gray-900"
-          onClick={(e) => { e.preventDefault(); setActiveSection("home"); }}>
-          RecoVibe<span className="text-yellow-400">.</span>
-        </a>
+      <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
+        <div className="flex items-center justify-between px-4 md:px-10 py-4">
+          <a href="/" className="font-display text-xl md:text-2xl font-black tracking-tight text-gray-900"
+            onClick={(e) => { e.preventDefault(); setActiveSection("home"); setMobileMenuOpen(false); }}>
+            RecoVibe<span className="text-yellow-400">.</span>
+          </a>
 
-        <ul className="flex items-center gap-7 text-sm font-medium text-gray-800 list-none">
-          {/* Home */}
-          <li>
-            <button
-              onClick={() => setActiveSection("home")}
-              className={`transition-colors font-semibold pb-0.5 ${
-                activeSection === "home"
-                  ? "border-b-2 border-yellow-400 text-gray-900"
-                  : "text-gray-600 hover:text-yellow-500"
-              }`}
-            >
-              Home
-            </button>
-          </li>
-
-          {/* Best Seller */}
-          <li>
-            <button
-              onClick={() => setActiveSection("best-seller")}
-              className={`transition-colors font-semibold pb-0.5 flex items-center gap-1 ${
-                activeSection === "best-seller"
-                  ? "border-b-2 border-yellow-400 text-gray-900"
-                  : "text-gray-600 hover:text-yellow-500"
-              }`}
-            >
-              Best Seller
-              {activeSection !== "best-seller" && (
-                <span className="text-[10px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full">HOT</span>
-              )}
-            </button>
-          </li>
-
-          {/* Shop by Occasion — opens chatbot */}
-          <li>
-            <button
-              onClick={() => {
-                setActiveSection("home");
-                setTimeout(() => {
-                  // trigger the chatbot
-                  const chatBtn = document.querySelector('[aria-label="Toggle chat"]');
-                  if (chatBtn) chatBtn.click();
-                }, 100);
-              }}
-              className="text-gray-600 hover:text-yellow-500 transition-colors font-semibold"
-            >
-              Shop by Occasion
-            </button>
-          </li>
-
-          {/* New Releases */}
-          <li>
-            <button
-              onClick={() => setActiveSection("new-releases")}
-              className={`transition-colors font-semibold pb-0.5 flex items-center gap-1 ${
-                activeSection === "new-releases"
-                  ? "border-b-2 border-yellow-400 text-gray-900"
-                  : "text-gray-600 hover:text-yellow-500"
-              }`}
-            >
-              New Releases
-              {activeSection !== "new-releases" && (
-                <span className="text-[10px] bg-blue-100 text-blue-700 font-black px-1.5 py-0.5 rounded-full">NEW</span>
-              )}
-            </button>
-          </li>
-
-          {/* Most Reviewed */}
-          <li>
-            <button
-              onClick={() => setActiveSection("most-reviewed")}
-              className={`transition-colors font-semibold pb-0.5 ${
-                activeSection === "most-reviewed"
-                  ? "border-b-2 border-yellow-400 text-gray-900"
-                  : "text-gray-600 hover:text-yellow-500"
-              }`}
-            >
-              Most Reviewed
-            </button>
-          </li>
-
-          {/* Sale */}
-          <li>
-            <button
-              onClick={() => setActiveSection("sale")}
-              className={`transition-colors font-bold pb-0.5 ${
-                activeSection === "sale"
-                  ? "border-b-2 border-red-500 text-red-500"
-                  : "text-red-500 hover:text-red-600"
-              }`}
-            >
-              🔥 Sale
-            </button>
-          </li>
-
-          {user?.role === "admin" && (
+          {/* Desktop nav links */}
+          <ul className="hidden lg:flex items-center gap-7 text-sm font-medium text-gray-800 list-none">
             <li>
-              <Link to="/admin" className="text-red-500 font-bold hover:text-red-600">Admin</Link>
+              <button onClick={() => setActiveSection("home")}
+                className={`transition-colors font-semibold pb-0.5 ${
+                  activeSection === "home" ? "border-b-2 border-yellow-400 text-gray-900" : "text-gray-600 hover:text-yellow-500"
+                }`}>Home</button>
             </li>
-          )}
-        </ul>
-
-        {/* NAVBAR RIGHT */}
-        <div className="flex items-center gap-4">
-
-          {/* Search */}
-          <div ref={searchRef} className="relative">
-            <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden focus-within:border-yellow-400 transition-colors bg-white">
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="px-4 py-2 text-sm outline-none w-52 bg-transparent"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => isLoggedIn && searchHistory.length > 0 && setShowHistory(true)}
-                onKeyDown={(e) => e.key === "Enter" && handleMLSearch()}
-              />
-              <button
-                onClick={handleMLSearch}
-                className="px-4 py-2 bg-gray-900 text-white text-sm hover:bg-yellow-400 hover:text-gray-900 transition-colors"
-              >
-                🔍
+            <li>
+              <button onClick={() => setActiveSection("best-seller")}
+                className={`transition-colors font-semibold pb-0.5 flex items-center gap-1 ${
+                  activeSection === "best-seller" ? "border-b-2 border-yellow-400 text-gray-900" : "text-gray-600 hover:text-yellow-500"
+                }`}>
+                Best Seller
+                {activeSection !== "best-seller" && (
+                  <span className="text-[10px] bg-yellow-400 text-gray-900 font-black px-1.5 py-0.5 rounded-full">HOT</span>
+                )}
               </button>
+            </li>
+            <li>
+              <button onClick={() => { setActiveSection("home"); setTimeout(() => { const chatBtn = document.querySelector('[aria-label="Toggle chat"]'); if (chatBtn) chatBtn.click(); }, 100); }}
+                className="text-gray-600 hover:text-yellow-500 transition-colors font-semibold">
+                Shop by Occasion
+              </button>
+            </li>
+            <li>
+              <button onClick={() => setActiveSection("new-releases")}
+                className={`transition-colors font-semibold pb-0.5 flex items-center gap-1 ${
+                  activeSection === "new-releases" ? "border-b-2 border-yellow-400 text-gray-900" : "text-gray-600 hover:text-yellow-500"
+                }`}>
+                New Releases
+                {activeSection !== "new-releases" && (
+                  <span className="text-[10px] bg-blue-100 text-blue-700 font-black px-1.5 py-0.5 rounded-full">NEW</span>
+                )}
+              </button>
+            </li>
+            <li>
+              <button onClick={() => setActiveSection("most-reviewed")}
+                className={`transition-colors font-semibold pb-0.5 ${
+                  activeSection === "most-reviewed" ? "border-b-2 border-yellow-400 text-gray-900" : "text-gray-600 hover:text-yellow-500"
+                }`}>Most Reviewed</button>
+            </li>
+            <li>
+              <button onClick={() => setActiveSection("sale")}
+                className={`transition-colors font-bold pb-0.5 ${
+                  activeSection === "sale" ? "border-b-2 border-red-500 text-red-500" : "text-red-500 hover:text-red-600"
+                }`}>🔥 Sale</button>
+            </li>
+            {user?.role === "admin" && (
+              <li><Link to="/admin" className="text-red-500 font-bold hover:text-red-600">Admin</Link></li>
+            )}
+          </ul>
+
+          {/* NAVBAR RIGHT */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Search — hidden on small, shown on md+ */}
+            <div ref={searchRef} className="relative hidden md:block">
+              <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden focus-within:border-yellow-400 transition-colors bg-white">
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  className="px-4 py-2 text-sm outline-none w-36 lg:w-52 bg-transparent"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => isLoggedIn && searchHistory.length > 0 && setShowHistory(true)}
+                  onKeyDown={(e) => e.key === "Enter" && handleMLSearch()}
+                />
+                <button onClick={handleMLSearch} className="px-3 py-2 bg-gray-900 text-white text-sm hover:bg-yellow-400 hover:text-gray-900 transition-colors">🔍</button>
+              </div>
+              {showHistory && searchHistory.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Searches</span>
+                  </div>
+                  {searchHistory.map((q, i) => (
+                    <button key={i} onClick={() => { setSearch(q); setShowHistory(false); handleMLSearch(); }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 border-b border-gray-50 last:border-b-0">
+                      <span className="text-gray-400 text-xs">🕐</span>{q}
+                    </button>
+                  ))}
+                  <button onClick={async () => { await API.delete("/api/search-history", { headers: { Authorization: `Bearer ${token}` } }); setSearchHistory([]); setShowHistory(false); }}
+                    className="w-full text-left px-4 py-2 text-xs text-gray-400 hover:text-gray-600 bg-gray-50 border-t border-gray-100">
+                    Clear history
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* History dropdown */}
-            {showHistory && searchHistory.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Searches</span>
-                </div>
-                {searchHistory.map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setSearch(q); setShowHistory(false); handleMLSearch(); }}
-                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 border-b border-gray-50 last:border-b-0"
-                  >
-                    <span className="text-gray-400 text-xs">🕐</span>
-                    {q}
-                  </button>
-                ))}
-                <button
-                  onClick={async () => {
-                    await API.delete("/api/search-history", { headers: { Authorization: `Bearer ${token}` } });
-                    setSearchHistory([]);
-                    setShowHistory(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-xs text-gray-400 hover:text-gray-600 bg-gray-50 border-t border-gray-100"
-                >
-                  Clear history
-                </button>
-              </div>
-            )}
-          </div>
+            {/* Cart */}
+            <Link to="/cart" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
+              🛒
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+              <span className="ml-1 hidden sm:inline">Cart</span>
+            </Link>
 
-          {/* Cart */}
-          <Link to="/cart" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
-            🛒
-            {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                {cartCount > 9 ? "9+" : cartCount}
-              </span>
-            )}
-            <span className="ml-1">Cart</span>
-          </Link>
+            {/* Wishlist */}
+            <Link to="/wishlist" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
+              ❤️
+              {wishlistCount > 0 && (
+                <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                  {wishlistCount > 9 ? "9+" : wishlistCount}
+                </span>
+              )}
+              <span className="ml-1 hidden sm:inline">Wishlist</span>
+            </Link>
 
-          {/* Wishlist */}
-          <Link to="/wishlist" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
-            ❤️
-            {wishlistCount > 0 && (
-              <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                {wishlistCount > 9 ? "9+" : wishlistCount}
-              </span>
-            )}
-            <span className="ml-1">Wishlist</span>
-          </Link>
-
-          {/* Login / Avatar */}
-          {isLoggedIn ? (
-            <Link
-              to="/profile"
-              title={user?.name || user?.email || "My Profile"}
-              style={{ textDecoration: "none" }}
-            >
-              <div
-                style={{
+            {/* Login / Avatar */}
+            {isLoggedIn ? (
+              <Link to="/profile" title={user?.name || user?.email || "My Profile"} style={{ textDecoration: "none" }}>
+                <div style={{
                   width: 36, height: 36, borderRadius: "50%",
                   background: "linear-gradient(135deg, #F5C518 0%, #e6b800 100%)",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -708,23 +639,83 @@ export default function Home() {
                 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(245,197,24,0.5)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(245,197,24,0.4)"; }}
-              >
-                {(user?.name || user?.email || "?")[0].toUpperCase()}
-              </div>
-            </Link>
-          ) : (
-            <Link to="/login" className="text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
-              Login
-            </Link>
-          )}
+                >
+                  {(user?.name || user?.email || "?")[0].toUpperCase()}
+                </div>
+              </Link>
+            ) : (
+              <Link to="/login" className="text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline hidden sm:block">
+                Login
+              </Link>
+            )}
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="lg:hidden flex flex-col justify-center items-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <span className={`block w-5 h-0.5 bg-gray-900 transition-all duration-200 ${mobileMenuOpen ? "rotate-45 translate-y-1.5" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-gray-900 my-1 transition-all duration-200 ${mobileMenuOpen ? "opacity-0" : ""}`} />
+              <span className={`block w-5 h-0.5 bg-gray-900 transition-all duration-200 ${mobileMenuOpen ? "-rotate-45 -translate-y-1.5" : ""}`} />
+            </button>
+          </div>
         </div>
+
+        {/* Mobile dropdown menu */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden bg-white border-t border-gray-100 px-4 pb-4 space-y-1">
+            {/* Mobile search */}
+            <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden focus-within:border-yellow-400 mb-3 mt-2">
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="px-4 py-2 text-sm outline-none flex-1 bg-transparent"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { handleMLSearch(); setMobileMenuOpen(false); } }}
+              />
+              <button onClick={() => { handleMLSearch(); setMobileMenuOpen(false); }} className="px-4 py-2 bg-gray-900 text-white text-sm">🔍</button>
+            </div>
+            {[
+              { key: "home", label: "Home" },
+              { key: "best-seller", label: "🏆 Best Seller" },
+              { key: "new-releases", label: "✨ New Releases" },
+              { key: "most-reviewed", label: "💬 Most Reviewed" },
+              { key: "sale", label: "🔥 Sale" },
+            ].map(({ key, label }) => (
+              <button key={key}
+                onClick={() => { setActiveSection(key); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                  activeSection === key ? "bg-yellow-400 text-gray-900" : "text-gray-700 hover:bg-gray-50"
+                }`}>{label}</button>
+            ))}
+            <button
+              onClick={() => { setActiveSection("home"); setMobileMenuOpen(false); setTimeout(() => { const chatBtn = document.querySelector('[aria-label="Toggle chat"]'); if (chatBtn) chatBtn.click(); }, 100); }}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
+              🛍️ Shop by Occasion
+            </button>
+            {!isLoggedIn && (
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 no-underline">
+                👤 Login / Register
+              </Link>
+            )}
+            {user?.role === "admin" && (
+              <Link to="/admin" onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:bg-red-50 no-underline">
+                ⚙️ Admin
+              </Link>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* ── SECTION PAGES (Best Seller / New Releases / Most Reviewed / Sale) ── */}
       {activeSection !== "home" && products.length > 0 && (
         <>
           {/* Back to home breadcrumb */}
-          <div className="px-10 py-3 bg-white border-b border-gray-100 flex items-center gap-2 text-sm">
+          <div className="px-4 md:px-10 py-3 bg-white border-b border-gray-100 flex items-center gap-2 text-sm">
             <button
               onClick={() => setActiveSection("home")}
               className="text-gray-400 hover:text-gray-900 transition-colors flex items-center gap-1"
@@ -754,50 +745,50 @@ export default function Home() {
         <>
 
           {/* ── HERO ── */}
-          <section className="grid grid-cols-2 gap-16 items-center px-20 py-16 max-w-[1400px] mx-auto min-h-screen [&>*]:min-w-0">
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center px-4 md:px-10 lg:px-20 py-10 md:py-16 max-w-[1400px] mx-auto [&>*]:min-w-0">
 
             {/* LEFT */}
-            <div className="relative z-10">
-              <span className="inline-block bg-yellow-400 text-gray-900 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
+            <div className="relative z-10 order-2 md:order-1">
+              <span className="inline-block bg-yellow-400 text-gray-900 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4 md:mb-6">
                 ✨ New Season 2026
               </span>
-              <h1 className="font-display text-6xl font-black leading-tight text-gray-900">
+              <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-black leading-tight text-gray-900">
                 Daily Fabulous <br />
                 <span className="underline-yellow">Style for You.</span>
               </h1>
-              <p className="text-gray-500 mt-5 text-lg leading-relaxed max-w-md">
+              <p className="text-gray-500 mt-4 md:mt-5 text-base md:text-lg leading-relaxed max-w-md">
                 Ready to dress to impress with our fabulous style collection.
                 Curated looks for every mood and occasion.
               </p>
-              <div className="flex gap-4 mt-8">
+              <div className="flex flex-wrap gap-3 md:gap-4 mt-6 md:mt-8">
                 <button
                   onClick={() => setActiveSection("best-seller")}
-                  className="flex items-center gap-2 bg-gray-900 text-white px-7 py-3.5 rounded-full font-semibold hover:bg-gray-700 transition-all hover:-translate-y-0.5">
+                  className="flex items-center gap-2 bg-gray-900 text-white px-6 md:px-7 py-3 md:py-3.5 rounded-full font-semibold hover:bg-gray-700 transition-all hover:-translate-y-0.5">
                   Shop Now →
                 </button>
                 <button
                   onClick={() => setActiveSection("sale")}
-                  className="px-7 py-3.5 rounded-full border-2 border-gray-300 font-semibold hover:border-red-400 hover:text-red-500 transition-all hover:-translate-y-0.5">
+                  className="px-6 md:px-7 py-3 md:py-3.5 rounded-full border-2 border-gray-300 font-semibold hover:border-red-400 hover:text-red-500 transition-all hover:-translate-y-0.5">
                   🔥 View Sale
                 </button>
               </div>
-              <div className="flex gap-10 mt-10">
+              <div className="flex gap-6 md:gap-10 mt-7 md:mt-10">
                 {[
                   { num: "5k+", label: "Happy Customers" },
                   { num: "10K+", label: "Products" },
                   { num: "4.9★", label: "Avg. Rating" },
                 ].map((s) => (
                   <div key={s.label}>
-                    <div className="font-display text-2xl font-black text-gray-900">{s.num}</div>
+                    <div className="font-display text-xl md:text-2xl font-black text-gray-900">{s.num}</div>
                     <div className="text-xs text-gray-500 mt-1">{s.label}</div>
                   </div>
                 ))}
               </div>
-              <div className="flex gap-4 mt-10">
+              <div className="flex gap-3 md:gap-4 mt-7 md:mt-10">
                 {MINI_PRODUCTS.map((mp) => (
-                  <div key={mp.label} className="bg-white rounded-2xl shadow-md overflow-hidden w-28 cursor-pointer hover:-translate-y-1 transition-transform">
+                  <div key={mp.label} className="bg-white rounded-2xl shadow-md overflow-hidden w-24 md:w-28 cursor-pointer hover:-translate-y-1 transition-transform">
                     <div className="relative">
-                      <img src={mp.img} alt={mp.label} className="w-full h-20 object-cover" />
+                      <img src={mp.img} alt={mp.label} className="w-full h-16 md:h-20 object-cover" />
                       <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                         15% Off
                       </span>
@@ -812,20 +803,20 @@ export default function Home() {
             </div>
 
             {/* RIGHT */}
-            <div className="relative z-10 flex justify-center items-center">
+            <div className="relative z-10 flex justify-center items-center order-1 md:order-2">
               <div className="relative w-full max-w-lg">
 
                 {/* Shoppers pill */}
-                <div className="absolute -top-4 right-6 flex items-center bg-white rounded-full px-3 py-1.5 shadow-lg z-20">
+                <div className="absolute -top-4 right-2 md:right-6 flex items-center bg-white rounded-full px-3 py-1.5 shadow-lg z-20">
                   {[1, 2, 3, 4].map((i) => (
                     <img key={i} src={`https://i.pravatar.cc/40?img=${i}`} alt={`user${i}`}
-                      className="w-7 h-7 rounded-full border-2 border-white object-cover -ml-1.5 first:ml-0" />
+                      className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-white object-cover -ml-1.5 first:ml-0" />
                   ))}
                   <span className="text-xs font-semibold ml-2 text-gray-800">10k+ Shoppers</span>
                 </div>
 
                 {/* Hero image slider */}
-                <div className="relative overflow-hidden rounded-3xl shadow-2xl" style={{ height: "580px" }}>
+                <div className="relative overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl" style={{ height: "clamp(280px, 50vw, 580px)" }}>
                   {HERO_SLIDES.map((slide, i) => (
                     <img
                       key={slide.image}
@@ -844,11 +835,11 @@ export default function Home() {
                     className="absolute bottom-0 left-0 right-0 h-32 z-10"
                     style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent)" }}
                   />
-                  <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between z-20">
-                    <span className="text-white font-bold text-base tracking-wide drop-shadow">
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between z-20">
+                    <span className="text-white font-bold text-sm md:text-base tracking-wide drop-shadow">
                       {HERO_SLIDES[slideIndex].label}
                     </span>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5 md:gap-2">
                       {HERO_SLIDES.map((_, i) => (
                         <button key={i} onClick={() => goToSlide(i)}
                           style={{
@@ -866,8 +857,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Floating sneaker card */}
-                <div className="absolute top-1/4 -left-14 bg-white rounded-2xl shadow-xl p-3 z-20">
+                {/* Floating sneaker card — hidden on small screens to prevent overflow */}
+                <div className="hidden md:block absolute top-1/4 -left-14 bg-white rounded-2xl shadow-xl p-3 z-20">
                   <img
                     src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=120&q=80"
                     alt="sneaker"
@@ -877,8 +868,8 @@ export default function Home() {
                   <span className="text-xs font-bold text-red-500">₹2,999</span>
                 </div>
 
-                {/* Floating review card */}
-                <div className="absolute bottom-8 -right-12 bg-white rounded-2xl shadow-xl px-4 py-3 z-20">
+                {/* Floating review card — hidden on small screens to prevent overflow */}
+                <div className="hidden md:block absolute bottom-8 -right-12 bg-white rounded-2xl shadow-xl px-4 py-3 z-20">
                   <p className="text-sm font-bold text-gray-900">10k+ Reviews</p>
                   <p className="text-yellow-400 text-sm mt-0.5">★★★★★</p>
                   <p className="text-xs text-gray-400">(5.0)</p>
@@ -888,8 +879,8 @@ export default function Home() {
           </section>
 
           {/* ── QUICK NAVIGATION CARDS (replaces dead nav clicks with visual CTAs) ── */}
-          <section className="px-10 py-10 bg-white">
-            <div className="max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <section className="px-4 md:px-10 py-8 md:py-10 bg-white">
+            <div className="max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
               {[
                 { key: "best-seller",   icon: "🏆", label: "Best Sellers",   sub: "Highest rated picks",    bg: "#fffbeb", border: "#F5C518"  },
                 { key: "new-releases",  icon: "✨", label: "New Releases",   sub: "Just arrived",           bg: "#eff6ff", border: "#93c5fd"  },
@@ -928,9 +919,9 @@ export default function Home() {
           <BrandShowcase onBrandSelect={(b) => { setActiveBrand(b); setPage(1); }} />
 
           {/* ── COLLECTION ── */}
-          <section className="px-10 py-20 bg-gray-50" id="collection">
-            <div className="text-center mb-10">
-              <h2 className="font-display text-4xl font-black text-gray-900">Our Collection</h2>
+          <section className="px-4 md:px-10 py-10 md:py-20 bg-gray-50" id="collection">
+            <div className="text-center mb-8 md:mb-10">
+              <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">Our Collection</h2>
               <p className="text-gray-500 mt-3 text-base">Discover the latest trends in fashion</p>
             </div>
 
