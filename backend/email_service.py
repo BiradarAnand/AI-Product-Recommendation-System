@@ -121,6 +121,7 @@ def send_otp_email(name: str, email: str, otp: str) -> bool:
             "Authorization": f"Bearer {MAILERSEND_API_KEY}",
             "Content-Type":  "application/json",
             "X-Requested-With": "XMLHttpRequest",
+            "User-Agent": "Mozilla/5.0",
         },
         method="POST",
     )
@@ -166,6 +167,7 @@ def test_connection() -> bool:
         headers={
             "Authorization": f"Bearer {MAILERSEND_API_KEY}",
             "Content-Type":  "application/json",
+            "User-Agent": "Mozilla/5.0",
         },
     )
     try:
