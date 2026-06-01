@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from auto_trainer import start_auto_trainer
-from chatbot_route import chatbot_bp
+from chatbot_route import chat_bp
 from unified_chat_route import unified_chat_bp
 from db import get_db
 load_dotenv()
@@ -69,7 +69,7 @@ app.register_blueprint(auth_bp,        url_prefix="/api/auth")
 app.register_blueprint(recommend_bp,   url_prefix="/api")
 app.register_blueprint(data_bp,        url_prefix="/api")
 app.register_blueprint(occasion_bp)
-app.register_blueprint(chatbot_bp)
+app.register_blueprint(chat_bp)
 app.register_blueprint(unified_chat_bp)
 app.register_blueprint(admin_bp,       url_prefix="/api/admin")
 

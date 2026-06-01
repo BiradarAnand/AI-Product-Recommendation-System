@@ -12,11 +12,8 @@ services:
     rootDir: backend
 
     # ── Build ──────────────────────────────────────────────────────
-    # 1. Install Node.js packages for the Nodemailer subprocess script
-    # 2. Install Python packages
-    buildCommand: |
-      cd mailer && npm install --omit=dev && cd ..
-      pip install -r requirements.txt
+    # 1. Install Python packages
+    buildCommand: pip install -r requirements.txt
 
     # ── Start ──────────────────────────────────────────────────────
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 120

@@ -1,211 +1,269 @@
 """
-chatbot_route.py — Groq-powered chatbot with product recommendation
+chat_routes.py — Simple keyword-based chatbot
+Maps user intent to DB categories and returns real products
+No SpaCy, no ML needed — pure keyword matching
 """
 
-import os
-import json
-import re
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from groq import Groq
-from datetime import datetime
 from db import get_db
 
-chatbot_bp  = Blueprint("chatbot", __name__)
-groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+chat_bp = Blueprint("chat", __name__)
 
+# ── Intent → Category mapping ──────────────────────────────────────────────
+INTENT_MAP = {
+    # Occasions
+    "job interview":    ["Shirts", "Trousers", "Formal Shoes", "Blazers"],
+    "interview":        ["Shirts", "Trousers", "Formal Shoes", "Blazers"],
+    "office":           ["Shirts", "Trousers", "Formal Shoes", "Blazers"],
+    "work":             ["Shirts", "Trousers", "Formal Shoes"],
+    "formal":           ["Shirts", "Trousers", "Blazers", "Formal Shoes"],
+    "wedding":          ["Blazers", "Shirts", "Trousers", "Ethnic Wear", "Kurtas"],
+    "function":         ["Blazers", "Kurtas", "Ethnic Wear", "Shirts"],
+    "festival":         ["Kurtas", "Ethnic Wear"],
+    "ethnic":           ["Kurtas", "Ethnic Wear"],
+    "traditional":      ["Kurtas", "Ethnic Wear"],
+    "casual":           ["Tshirts", "Jeans", "Casual Shoes", "Shorts"],
+    "outing":           ["Tshirts", "Jeans", "Casual Shoes", "Sneakers"],
+    "weekend":          ["Tshirts", "Jeans", "Shorts", "Sneakers"],
+    "date":             ["Shirts", "Jeans", "Casual Shoes", "Watches"],
+    "date night":       ["Shirts", "Jeans", "Casual Shoes", "Watches"],
+    "party":            ["Shirts", "Jeans", "Sneakers", "Watches"],
+    "gym":              ["Tshirts", "Track Pants", "Sports Shoes", "Activewear"],
+    "sports":           ["Sports Shoes", "Track Pants", "Tshirts", "Activewear"],
+    "workout":          ["Track Pants", "Sports Shoes", "Tshirts", "Activewear"],
+    "fitness":          ["Track Pants", "Sports Shoes", "Activewear"],
+    "running":          ["Sports Shoes", "Track Pants", "Activewear"],
+    "beach":            ["Shorts", "Tshirts", "Casual Shoes", "Caps", "Sunglasses"],
+    "vacation":         ["Shorts", "Tshirts", "Casual Shoes", "Sunglasses"],
+    "travel":           ["Tshirts", "Jeans", "Casual Shoes", "Caps"],
+    "college":          ["Tshirts", "Jeans", "Sneakers", "Casual Shoes"],
+    "campus":           ["Tshirts", "Jeans", "Sneakers"],
 
-# ── Product fetcher ───────────────────────────────────────────────────────────
-def fetch_products(filters: dict, limit: int = 6) -> list:
-    conditions = ["stock > 0"]
-    params     = []
-    if filters.get("category"):
-        conditions.append("LOWER(category) LIKE %s")
-        params.append(f"%{filters['category'].lower()}%")
-    if filters.get("brand"):
-        conditions.append("LOWER(brand) LIKE %s")
-        params.append(f"%{filters['brand'].lower()}%")
-    if filters.get("max_price"):
-        conditions.append("price <= %s")
-        params.append(filters["max_price"])
-    if filters.get("min_price"):
-        conditions.append("price >= %s")
-        params.append(filters["min_price"])
-    if filters.get("min_rating"):
-        conditions.append("rating >= %s")
-        params.append(filters["min_rating"])
-    if filters.get("keyword"):
-        conditions.append(
-            "(LOWER(name) LIKE %s OR LOWER(description) LIKE %s OR LOWER(brand) LIKE %s)"
-        )
-        kw = f"%{filters['keyword'].lower()}%"
-        params.extend([kw, kw, kw])
-    where_clause = " AND ".join(conditions)
-    query = f"""
-        SELECT id, name, description, category, price, stock, rating, reviews, image_url, brand
-        FROM products WHERE {where_clause}
-        ORDER BY rating DESC, reviews DESC LIMIT %s
-    """
-    params.append(limit)
-    conn = None                                          # ✅ FIXED
-    try:
-        conn   = get_db()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        cursor.close()
-        return rows
-    except Exception as e:
-        print(f"[fetch_products] error: {e}")
-        return []
-    finally:
-        if conn:                                         # ✅ FIXED
-            try: conn.close()
-            except: pass
- 
-# ── Save chat to search history ───────────────────────────────────────────────
-
-def save_search(user_id: int, query: str):
-    if not user_id or not query:
-        return
-    conn = None                                          # ✅ FIXED
-    try:
-        conn   = get_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO search_history (user_id, search_query, searched_at) VALUES (%s, %s, %s)",
-            (user_id, query, datetime.utcnow()),
-        )
-        conn.commit()
-        cursor.close()
-    except Exception as e:
-        print(f"[save_search] error: {e}")
-    finally:
-        if conn:                                         # ✅ FIXED
-            try: conn.close()
-            except: pass
- 
-
-# ── Filter extractor (Groq step 1) ────────────────────────────────────────────
-def extract_filters(user_message: str, user_context: dict) -> dict:
-    system_prompt = """You are a filter-extraction assistant for an e-commerce app.
-Extract product search filters from the user message and return ONLY valid JSON.
-Available categories: Shirts, Jeans, Watches, Track Pants, Tshirts, Casual Shoes, Sports Shoes, Trousers.
-
-Return JSON with these optional keys (omit if not mentioned):
-{
-  "category": string,
-  "brand": string,
-  "keyword": string,
-  "max_price": number,
-  "min_price": number,
-  "min_rating": number (1-5)
+    # Product types
+    "shirt":            ["Shirts"],
+    "shirts":           ["Shirts"],
+    "tshirt":           ["Tshirts"],
+    "t-shirt":          ["Tshirts"],
+    "tshirts":          ["Tshirts"],
+    "jeans":            ["Jeans"],
+    "denim":            ["Jeans"],
+    "trouser":          ["Trousers"],
+    "trousers":         ["Trousers"],
+    "pant":             ["Trousers", "Jeans"],
+    "pants":            ["Trousers", "Jeans"],
+    "track":            ["Track Pants"],
+    "trackpant":        ["Track Pants"],
+    "track pants":      ["Track Pants"],
+    "watch":            ["Watches"],
+    "watches":          ["Watches"],
+    "shoe":             ["Casual Shoes", "Sports Shoes", "Formal Shoes", "Sneakers"],
+    "shoes":            ["Casual Shoes", "Sports Shoes", "Formal Shoes", "Sneakers"],
+    "sneaker":          ["Sneakers", "Casual Shoes"],
+    "sneakers":         ["Sneakers", "Casual Shoes"],
+    "formal shoes":     ["Formal Shoes"],
+    "casual shoes":     ["Casual Shoes"],
+    "sports shoes":     ["Sports Shoes"],
+    "hoodie":           ["Tshirts"],
+    "blazer":           ["Blazers"],
+    "blazers":          ["Blazers"],
+    "kurta":            ["Kurtas"],
+    "kurtas":           ["Kurtas"],
+    "shorts":           ["Shorts"],
+    "cap":              ["Caps"],
+    "caps":             ["Caps"],
+    "sunglass":         ["Sunglasses"],
+    "sunglasses":       ["Sunglasses"],
+    "activewear":       ["Activewear"],
 }
 
-Examples:
-- "show me blue jeans under 2000" → {"category":"Jeans","max_price":2000,"keyword":"blue"}
-- "Nike sports shoes" → {"category":"Sports Shoes","brand":"Nike"}
-- "casual shirt good rating" → {"category":"Shirts","min_rating":4}
-"""
-    context_hint = ""
-    if user_context.get("recent_searches"):
-        context_hint = f"\nUser recently searched: {', '.join(user_context['recent_searches'][:3])}"
+OCCASIONS = [
+    {"key": "job_interview", "label": "Job Interview",       "icon": "💼"},
+    {"key": "sports",        "label": "Sports & Gym",        "icon": "🏃"},
+    {"key": "wedding",       "label": "Wedding / Function",  "icon": "🎊"},
+    {"key": "casual_outing", "label": "Casual Outing",       "icon": "☀️"},
+    {"key": "date_night",    "label": "Date Night",          "icon": "🌙"},
+    {"key": "office",        "label": "Office & Work",       "icon": "🏢"},
+    {"key": "festival",      "label": "Festival",            "icon": "🪔"},
+    {"key": "beach",         "label": "Beach & Vacation",    "icon": "🏖️"},
+    {"key": "college",       "label": "College / Campus",    "icon": "🎓"},
+]
 
-    response = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_message + context_hint},
-        ],
-        temperature=0.1,
-        max_tokens=300,
-    )
-    raw = re.sub(r"```json|```", "", response.choices[0].message.content.strip()).strip()
+OCCASION_KEY_MAP = {
+    "job_interview":  "interview",
+    "sports":         "sports",
+    "wedding":        "wedding",
+    "casual_outing":  "casual",
+    "date_night":     "date night",
+    "office":         "office",
+    "festival":       "festival",
+    "beach":          "beach",
+    "college":        "college",
+}
+
+
+def get_products_by_categories(categories, limit=12, budget=None):
+    """Fetch products from DB matching given categories."""
+    if not categories:
+        return []
     try:
-        return json.loads(raw)
-    except Exception:
-        return {"keyword": user_message}
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+
+        placeholders = ",".join(["%s"] * len(categories))
+        query = f"""
+            SELECT id, name, brand, category, price, rating, image_url, stock
+            FROM products
+            WHERE category IN ({placeholders})
+        """
+        params = list(categories)
+
+        # Budget filter
+        if budget:
+            budget_map = {
+                "budget":  1000,
+                "mid":     3000,
+                "premium": 8000,
+            }
+            max_price = budget_map.get(budget)
+            if max_price:
+                query += " AND price <= %s"
+                params.append(max_price)
+
+        query += " ORDER BY rating DESC, RAND() LIMIT %s"
+        params.append(limit)
+
+        cur.execute(query, params)
+        products = cur.fetchall()
+        cur.close()
+        conn.close()
+        return products
+    except Exception as e:
+        print(f"[Chat] DB error: {e}")
+        return []
 
 
-# ── Recommendation reply (Groq step 2) ────────────────────────────────────────
-def generate_reply(user_message: str, products: list,
-                   user_context: dict, chat_history: list) -> str:
-    product_summary = "\n".join(
-        f"- {p['name']} | {p['brand']} | ₹{p['price']} | ⭐{p['rating']} | Category: {p['category']}"
-        for p in products
-    )
-    wish_hint = ""
-    if user_context.get("wishlist_categories"):
-        wish_hint = f"The user has shown interest in: {', '.join(set(user_context['wishlist_categories']))}."
+def detect_intent(message):
+    """Find matching categories from message."""
+    msg = message.lower().strip()
 
-    system_prompt = f"""You are a helpful and friendly shopping assistant for an Indian e-commerce store.
-Your job is to recommend products and explain WHY they match the user's needs.
-Keep responses concise (3-5 sentences max). Use ₹ for prices. Be warm and helpful.
-{wish_hint}
+    # Check multi-word phrases first (longer matches win)
+    matched_categories = []
+    matched_keys = sorted(INTENT_MAP.keys(), key=len, reverse=True)
 
-Available products matching the query:
-{product_summary if product_summary else "No exact matches found, suggest alternatives."}
+    for key in matched_keys:
+        if key in msg:
+            for cat in INTENT_MAP[key]:
+                if cat not in matched_categories:
+                    matched_categories.append(cat)
 
-Rules:
-- Mention 2-3 top picks by name with a brief reason
-- If no products found, ask clarifying questions
-- Never make up products not in the list above
-- If the user is asking a general question (not product search), just answer helpfully
-"""
-    messages = [{"role": "system", "content": system_prompt}]
-    for turn in chat_history[-4:]:
-        messages.append({"role": turn["role"], "content": turn["content"]})
-    messages.append({"role": "user", "content": user_message})
-
-    response = groq_client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages,
-        temperature=0.7,
-        max_tokens=500,
-    )
-    return response.choices[0].message.content.strip()
+    return matched_categories
 
 
-# ── Main chat endpoint ────────────────────────────────────────────────────────
-@chatbot_bp.route("/api/chat", methods=["POST"])
-@jwt_required()
-def chat():
-    user_id      = get_jwt_identity()
-    data         = request.get_json()
-    user_message = data.get("message", "").strip()
-    chat_history = data.get("history", [])
-
-    if not user_message:
-        return jsonify({"error": "Message is required"}), 400
-
-    user_context = fetch_user_context(user_id)
-    filters      = extract_filters(user_message, user_context)
-    products     = fetch_products(filters, limit=6)
-
-    if not products and filters.get("keyword"):
-        products = fetch_products({"keyword": filters["keyword"]}, limit=6)
-
-    reply = generate_reply(user_message, products, user_context, chat_history)
-    save_search(user_id, user_message)
-
-    return jsonify({"reply": reply, "products": products, "filters_used": filters})
+def detect_budget(message):
+    """Extract budget filter from message."""
+    msg = message.lower()
+    if any(x in msg for x in ["under 1000", "below 1000", "less than 1000", "₹1000", "budget"]):
+        return "budget"
+    if any(x in msg for x in ["under 3000", "below 3000", "less than 3000", "₹3000"]):
+        return "mid"
+    if any(x in msg for x in ["under 8000", "below 8000", "less than 8000", "₹8000", "premium"]):
+        return "premium"
+    return None
 
 
-# ── Guest chat ─────────────────────────────────────────────────────────────────
-@chatbot_bp.route("/api/chat/guest", methods=["POST"])
-def guest_chat():
-    data         = request.get_json()
-    user_message = data.get("message", "").strip()
-    chat_history = data.get("history", [])
+def format_products(products):
+    """Format products for frontend."""
+    result = []
+    for p in products:
+        img = p.get("image_url", "")
+        if img and not img.startswith("http"):
+            img = f"https://ai-product-recommendation-system-by60.onrender.com/{img}"
+        result.append({
+            "id":        p["id"],
+            "name":      p["name"],
+            "brand":     p.get("brand", ""),
+            "category":  p.get("category", ""),
+            "price":     float(p.get("price", 0)),
+            "rating":    float(p.get("rating", 0)),
+            "image_url": img,
+            "stock":     p.get("stock", 0),
+        })
+    return result
 
-    if not user_message:
-        return jsonify({"error": "Message is required"}), 400
 
-    filters  = extract_filters(user_message, {})
-    products = fetch_products(filters, limit=6)
+# ── Routes ─────────────────────────────────────────────────────────────────
 
-    if not products and filters.get("keyword"):
-        products = fetch_products({"keyword": filters["keyword"]}, limit=6)
+@chat_bp.route("/api/chat/occasions", methods=["GET"])
+def get_occasions():
+    return jsonify(OCCASIONS)
 
-    reply = generate_reply(user_message, products, {}, chat_history)
-    return jsonify({"reply": reply, "products": products, "filters_used": filters})
+
+@chat_bp.route("/api/chat/unified", methods=["POST"])
+def unified_chat():
+    data    = request.get_json() or {}
+    message = (data.get("message") or "").strip()
+    refinements = data.get("refinements") or {}
+    budget  = refinements.get("budget") or detect_budget(message)
+
+    if not message:
+        return jsonify({
+            "reply":    "Hi! 👋 Ask me anything — try 'job interview', 'gym outfit', or 'watches under ₹3000'",
+            "type":     "clarify",
+            "products": [],
+            "occasions": OCCASIONS,
+        })
+
+    # Detect categories from message
+    categories = detect_intent(message)
+
+    # No match found
+    if not categories:
+        return jsonify({
+            "reply":    f"I couldn't find products for '{message}'. Try something like: job interview, casual outing, gym, wedding, jeans, watches 👇",
+            "type":     "clarify",
+            "products": [],
+            "occasions": OCCASIONS,
+        })
+
+    # Fetch products
+    products = get_products_by_categories(categories, limit=12, budget=budget)
+    formatted = format_products(products)
+
+    if not formatted:
+        return jsonify({
+            "reply":    f"No products found for that right now. Try a different style or occasion!",
+            "type":     "clarify",
+            "products": [],
+            "occasions": OCCASIONS,
+        })
+
+ # Build reply message
+    cat_names = ", ".join(categories[:3])
+    budget_map = {"budget": 1000, "mid": 3000, "premium": 8000}
+    budget_text = f" under ₹{budget_map.get(budget, '')}" if budget else ""
+    reply = f"Here are {len(formatted)} picks for {message}{budget_text} — showing {cat_names} 🎯"
+
+    return jsonify({
+        "reply":    reply,
+        "type":     "general",
+        "products": formatted,
+        "total":    len(formatted),
+        "categories": categories,
+    })
+
+
+@chat_bp.route("/api/chat/search", methods=["GET"])
+def chat_search():
+    q      = request.args.get("q", "").strip()
+    budget = request.args.get("budget")
+    limit  = int(request.args.get("limit", 12))
+
+    categories = detect_intent(q) if q else []
+
+    if not categories:
+        return jsonify({"results": [], "total": 0})
+
+    products  = get_products_by_categories(categories, limit=limit, budget=budget)
+    formatted = format_products(products)
+
+    return jsonify({"results": formatted, "total": len(formatted), "categories": categories})

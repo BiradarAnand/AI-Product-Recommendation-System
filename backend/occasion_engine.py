@@ -1,4 +1,11 @@
-# occasion_engine.py  — v2 — Content-Based TF-IDF Cosine Similarity
+# occasion_engine.py  — v3 — Fixed for real DB categories
+# Key fixes:
+#   1. Unicode arrow removed from print() -> no more cp1252 crash on Windows
+#   2. OUTFIT_SLOTS now uses ACTUAL DB categories (Shirts, Tshirts, Jeans, etc.)
+#   3. OCCASION_CATEGORIES updated to match real DB data
+#   4. Broader category fallbacks so outfit set is never empty
+#   5. Better cosine reranking with purpose-aligned queries
+# ─────────────────────────────────────────────────────────────────────
 
 import os
 import pickle
@@ -12,194 +19,184 @@ from db import get_db
 load_dotenv()
 
 occasion_bp = Blueprint("occasion", __name__)
+MODEL_DIR   = "models"
 
-MODEL_DIR = "models"
+# ── Actual categories in the DB ───────────────────────────────────────
+# Based on database_info: Shirts, Jeans, Watches, Track Pants, Tshirts,
+#                         Casual Shoes, Sports Shoes, Trousers
+# ─────────────────────────────────────────────────────────────────────
 
-# ── Rich purpose queries ──────────────────────────────────────────────
 OCCASION_PURPOSE_QUERIES = {
     "job_interview": (
-        "formal professional office business shirt trouser blazer formal shoes "
-        "leather oxford classic cotton slim fit regular fit corporate executive "
-        "interview meeting boardroom client presentation polished attire suit "
-        "professional look solid color formal pants classic watch analog leather strap"
+        "formal professional shirt trouser classic slim regular solid striped "
+        "business corporate interview presentation oxford watch leather analog"
     ),
     "sports": (
-        "sport athletic gym workout running training exercise fitness dry fit "
-        "track pants sports shoes sneakers activewear shorts athletic cap "
-        "flexible breathable grip cushion running outdoor physical performance "
-        "jogging trekking cycling badminton cricket waterproof sport watch rubber"
+        "sport athletic gym workout running track pants tshirt sports shoes "
+        "breathable flexible dry fit performance active training digital watch"
     ),
     "wedding_guest": (
-        "ethnic traditional wedding kurta sherwani embroidered premium elegant "
-        "festive cotton traditional wear sangeet baraat function ceremony ethnic shoes "
-        "mojari jutti gold analog watch metal strap classic premium elegant "
-        "traditional outfit marriage reception formal classic trouser churidar"
+        "ethnic traditional wedding premium elegant shirt trouser watch "
+        "casual shoes formal classic occasion special ceremony"
     ),
     "casual_outing": (
-        "casual comfortable everyday relaxed jeans tshirt sneakers casual shoes "
-        "regular fit slim lightweight everyday wear college hangout friends outing "
-        "weekend mall shopping casual shorts cap sunglasses street style printed polo "
-        "canvas everyday round dial silicon casual watch colorful"
+        "casual comfortable jeans tshirt casual shoes everyday hangout "
+        "relaxed regular weekend friends printed polo simple watch"
     ),
     "date_night": (
-        "stylish smart elegant premium slim fit shirt jeans watch sneakers casual shoes "
-        "date night dinner romantic classy attractive minimalist dark skinny tapered "
-        "leather shoes elegant slim metal watch stylish premium look solid printed "
-        "clean minimalist dress to impress special evening"
+        "stylish smart premium slim shirt jeans watch casual shoes "
+        "elegant classy attractive minimalist dark special evening"
     ),
     "office": (
-        "office work professional formal business casual shirt trouser formal shoes "
-        "analog watch leather strap workplace daily wear corporate attire cotton "
-        "formal shirt slim fit office trousers flat front business oxford derby "
-        "steel watch solid striped regular business look professional daily"
+        "formal office business shirt trouser casual shoes watch "
+        "professional daily corporate solid stripe classic"
     ),
     "festival": (
-        "ethnic traditional festival diwali eid puja navratri festive kurta "
-        "ethnic wear embroidered cotton premium elegant gold analog watch metal strap "
-        "festive shoes traditional leather ethnic mojari celebration outfit "
-        "churidar dhoti classic premium elegant festive season cultural"
+        "traditional ethnic festival premium shirt trouser classic "
+        "casual shoes elegant watch celebration special"
     ),
     "beach": (
-        "casual beach summer vacation light comfortable breezy shorts tshirt linen "
-        "cotton casual shoes sneakers slip on sandals cap sunglasses waterproof "
-        "sport digital rubber strap watch lightweight summer outfit relaxed "
-        "vacation travel holiday tropical breezy comfortable everyday summer casual"
+        "casual light summer tshirt track pants casual shoes simple "
+        "comfortable relaxed breezy watch sport"
     ),
 }
 
+# Slot-specific purpose queries aligned with real DB categories
 SLOT_PURPOSE_QUERIES = {
     "job_interview": {
-        "shirt": "formal cotton shirt office business professional slim regular solid striped classic",
-        "pant":  "formal trouser office classic slim straight flat front business professional dark",
-        "shoes": "formal leather shoes oxford derby classic office business professional polished",
-        "watch": "formal analog watch leather strap classic business professional metal dial steel",
+        "shirt": "formal cotton shirt office business professional slim solid striped classic",
+        "pant":  "formal trouser slim straight flat classic business dark office",
+        "shoes": "casual shoes formal classic leather oxford office professional",
+        "watch": "formal analog watch classic business leather metal professional",
     },
     "sports": {
-        "shirt": "dry fit sport athletic gym running performance activewear tshirt breathable flexible",
-        "pant":  "track pants sport flexible gym running athletic training shorts outdoor performance",
-        "shoes": "sports shoes running grip cushion athletic training outdoor performance durable",
-        "watch": "sport digital waterproof fitness stopwatch rubber strap outdoor active",
+        "shirt": "tshirt dry fit sport athletic gym running performance breathable",
+        "pant":  "track pants sport flexible gym running athletic training",
+        "shoes": "sports shoes running grip cushion training outdoor performance",
+        "watch": "watch sport digital waterproof rubber active fitness",
     },
     "wedding_guest": {
-        "shirt": "kurta ethnic traditional premium elegant festive embroidered cotton wedding",
-        "pant":  "formal traditional trouser churidar ethnic classic straight palazzo",
-        "shoes": "formal leather premium ethnic mojari jutti traditional classic wedding",
-        "watch": "premium classic elegant gold analog metal strap watch formal wedding",
+        "shirt": "shirt ethnic traditional premium elegant classic occasion",
+        "pant":  "trouser formal traditional classic straight elegant",
+        "shoes": "casual shoes formal elegant classic premium leather",
+        "watch": "watch premium classic elegant gold analog metal",
     },
     "casual_outing": {
-        "shirt": "casual comfortable everyday regular printed polo tshirt shirt light",
-        "pant":  "casual slim regular comfortable stretch skinny jeans shorts everyday",
-        "shoes": "casual comfortable everyday canvas street lightweight sneakers slip",
-        "watch": "casual sport everyday colorful silicon round dial simple watch",
+        "shirt": "tshirt casual comfortable everyday printed polo light shirt",
+        "pant":  "jeans casual slim regular comfortable stretch everyday",
+        "shoes": "casual shoes comfortable everyday canvas street lightweight",
+        "watch": "watch casual everyday simple sport colorful",
     },
     "date_night": {
-        "shirt": "slim stylish premium smart printed solid shirt date elegant",
-        "pant":  "slim stylish dark premium skinny tapered jeans trouser",
-        "shoes": "stylish premium clean elegant leather minimalist shoes sneaker",
-        "watch": "stylish premium elegant slim metal minimalist watch",
+        "shirt": "shirt slim stylish premium smart solid date elegant",
+        "pant":  "jeans slim stylish dark premium skinny",
+        "shoes": "casual shoes stylish premium clean elegant leather",
+        "watch": "watch stylish premium elegant slim metal minimalist",
     },
     "office": {
-        "shirt": "formal office business cotton regular solid striped shirt classic",
-        "pant":  "formal office slim classic flat front pleated trouser dark",
-        "shoes": "formal leather oxford derby office classic business shoes",
-        "watch": "formal classic business analog leather strap steel watch",
+        "shirt": "shirt formal office business cotton regular solid striped",
+        "pant":  "trouser formal office slim classic flat front dark",
+        "shoes": "casual shoes formal classic office professional",
+        "watch": "watch formal classic business analog leather metal",
     },
     "festival": {
-        "shirt": "ethnic traditional festive premium embroidered cotton kurta",
-        "pant":  "traditional ethnic churidar dhoti classic festive trouser",
-        "shoes": "ethnic traditional premium mojari leather festive shoes",
-        "watch": "premium gold classic elegant analog metal watch festive",
+        "shirt": "shirt traditional premium elegant classic ethnic",
+        "pant":  "trouser traditional classic festive elegant",
+        "shoes": "casual shoes traditional classic premium elegant",
+        "watch": "watch premium classic elegant analog metal festive",
     },
     "beach": {
-        "shirt": "casual light summer breezy linen cotton relaxed tshirt shirt",
-        "pant":  "casual light summer beach comfortable shorts swim cargo",
-        "shoes": "casual light comfortable slip on sandals canvas sneakers",
-        "watch": "sport waterproof casual digital rubber strap colorful summer",
+        "shirt": "tshirt casual light summer breezy cotton relaxed",
+        "pant":  "track pants casual light summer comfortable",
+        "shoes": "casual shoes light comfortable slip canvas",
+        "watch": "watch sport casual digital simple rubber",
     },
 }
 
+# ── Categories use REAL DB values ────────────────────────────────────
 OCCASION_CATEGORIES = {
     "job_interview": {
-        "primary":   ["Shirts", "Trousers", "Formal Shoes"],
-        "secondary": ["Blazers", "Watches"],
+        "primary":   ["Shirts", "Trousers"],
+        "secondary": ["Watches", "Casual Shoes"],
     },
     "sports": {
-        "primary":   ["Track Pants", "Sports Shoes", "Activewear"],
-        "secondary": ["Tshirts", "Shorts", "Caps"],
+        "primary":   ["Track Pants", "Sports Shoes", "Tshirts"],
+        "secondary": ["Watches"],
     },
     "wedding_guest": {
-        "primary":   ["Kurtas", "Ethnic Wear", "Shirts"],
-        "secondary": ["Trousers", "Watches", "Formal Shoes"],
+        "primary":   ["Shirts", "Trousers"],
+        "secondary": ["Watches", "Casual Shoes"],
     },
     "casual_outing": {
-        "primary":   ["Jeans", "Tshirts", "Sneakers"],
-        "secondary": ["Casual Shoes", "Shirts", "Shorts", "Caps", "Sunglasses"],
+        "primary":   ["Jeans", "Tshirts", "Casual Shoes"],
+        "secondary": ["Shirts", "Watches", "Track Pants"],
     },
     "date_night": {
         "primary":   ["Shirts", "Jeans", "Watches"],
-        "secondary": ["Sneakers", "Casual Shoes", "Trousers", "Sunglasses"],
+        "secondary": ["Casual Shoes", "Trousers"],
     },
     "office": {
-        "primary":   ["Shirts", "Trousers", "Formal Shoes"],
-        "secondary": ["Watches", "Blazers", "Casual Shoes"],
+        "primary":   ["Shirts", "Trousers"],
+        "secondary": ["Watches", "Casual Shoes"],
     },
     "festival": {
-        "primary":   ["Kurtas", "Ethnic Wear", "Shirts"],
-        "secondary": ["Trousers", "Watches", "Casual Shoes"],
+        "primary":   ["Shirts", "Trousers"],
+        "secondary": ["Watches", "Casual Shoes"],
     },
     "beach": {
-        "primary":   ["Shorts", "Tshirts", "Sneakers"],
-        "secondary": ["Casual Shoes", "Caps", "Sunglasses"],
+        "primary":   ["Tshirts", "Track Pants", "Casual Shoes"],
+        "secondary": ["Watches"],
     },
 }
 
+# ── Outfit slots using REAL DB categories ────────────────────────────
 OUTFIT_SLOTS = {
     "job_interview": {
         "shirt": ["Shirts"],
-        "pant":  ["Trousers"],
-        "shoes": ["Formal Shoes"],
+        "pant":  ["Trousers", "Jeans"],
+        "shoes": ["Casual Shoes"],
         "watch": ["Watches"],
     },
     "sports": {
-        "shirt": ["Tshirts", "Activewear"],
-        "pant":  ["Track Pants", "Shorts"],
-        "shoes": ["Sports Shoes"],
+        "shirt": ["Tshirts", "Shirts"],
+        "pant":  ["Track Pants", "Trousers"],
+        "shoes": ["Sports Shoes", "Casual Shoes"],
         "watch": ["Watches"],
     },
     "wedding_guest": {
-        "shirt": ["Kurtas", "Shirts"],
-        "pant":  ["Trousers", "Ethnic Wear"],
-        "shoes": ["Formal Shoes", "Casual Shoes"],
+        "shirt": ["Shirts"],
+        "pant":  ["Trousers", "Jeans"],
+        "shoes": ["Casual Shoes"],
         "watch": ["Watches"],
     },
     "casual_outing": {
         "shirt": ["Tshirts", "Shirts"],
-        "pant":  ["Jeans", "Shorts"],
-        "shoes": ["Sneakers", "Casual Shoes"],
+        "pant":  ["Jeans", "Track Pants", "Trousers"],
+        "shoes": ["Casual Shoes", "Sports Shoes"],
         "watch": ["Watches"],
     },
     "date_night": {
-        "shirt": ["Shirts"],
+        "shirt": ["Shirts", "Tshirts"],
         "pant":  ["Jeans", "Trousers"],
-        "shoes": ["Sneakers", "Casual Shoes", "Formal Shoes"],
+        "shoes": ["Casual Shoes"],
         "watch": ["Watches"],
     },
     "office": {
         "shirt": ["Shirts"],
-        "pant":  ["Trousers"],
-        "shoes": ["Formal Shoes"],
+        "pant":  ["Trousers", "Jeans"],
+        "shoes": ["Casual Shoes"],
         "watch": ["Watches"],
     },
     "festival": {
-        "shirt": ["Kurtas", "Ethnic Wear"],
-        "pant":  ["Trousers", "Ethnic Wear"],
-        "shoes": ["Formal Shoes", "Casual Shoes"],
+        "shirt": ["Shirts", "Tshirts"],
+        "pant":  ["Trousers", "Jeans"],
+        "shoes": ["Casual Shoes"],
         "watch": ["Watches"],
     },
     "beach": {
         "shirt": ["Tshirts", "Shirts"],
-        "pant":  ["Shorts"],
-        "shoes": ["Casual Shoes", "Sneakers"],
+        "pant":  ["Track Pants", "Jeans", "Trousers"],
+        "shoes": ["Casual Shoes", "Sports Shoes"],
         "watch": ["Watches"],
     },
 }
@@ -215,7 +212,7 @@ BUDGET_RANGES = {
 }
 
 CHATBOT_REPLIES = {
-    "job_interview": "Great choice! For a job interview you want to look sharp and confident. Here are outfits that'll make a strong first impression 💼",
+    "job_interview": "Great choice! For a job interview you want to look sharp and confident. Here are outfits that will make a strong first impression 💼",
     "sports":        "Let's get you geared up! Here are performance picks to power your workout 🏃",
     "wedding_guest": "Exciting! Here are smart outfits to help you look great at the function 🎊",
     "casual_outing": "Comfort meets style! Here are relaxed yet stylish picks for your day out ☀️",
@@ -226,8 +223,8 @@ CHATBOT_REPLIES = {
 }
 
 LOW_CONF_REPLY = (
-    "I'm not sure which occasion you mean 🤔 Could you pick one below — "
-    "or tell me more? E.g. 'job interview', 'gym session', 'wedding function', 'date night'..."
+    "I am not sure which occasion you mean. Could you pick one below or tell me more? "
+    "For example: 'job interview', 'gym session', 'wedding function', 'date night'..."
 )
 
 
@@ -245,7 +242,7 @@ def _load_content_model():
     try:
         with open(path, "rb") as f:
             _content_model = pickle.load(f)
-        print("[OccasionEngine] TF-IDF content model loaded ✓")
+        print("[OccasionEngine] TF-IDF content model loaded")
         return _content_model
     except Exception as e:
         print(f"[OccasionEngine] Failed to load content model: {e}")
@@ -253,11 +250,14 @@ def _load_content_model():
 
 
 def _row_to_text(row: dict) -> str:
-    name        = str(row.get("name", ""))
-    category    = str(row.get("category", ""))
-    brand       = str(row.get("brand", ""))
-    description = str(row.get("description", ""))
-    parts = [name, category, category, brand, brand, description]
+    parts = [
+        str(row.get("name",        "")),
+        str(row.get("category",    "")),
+        str(row.get("category",    "")),  # repeat for weight
+        str(row.get("brand",       "")),
+        str(row.get("brand",       "")),  # repeat for weight
+        str(row.get("description", "")),
+    ]
     return " ".join(p for p in parts if p and p.strip() and p.lower() != "nan").lower()
 
 
@@ -277,7 +277,7 @@ def _cosine_rerank(rows: list, purpose_query: str,
     model = _load_content_model()
     n     = len(rows)
 
-    ratings  = np.array([float(r.get("rating", 0) or 0)  for r in rows])
+    ratings  = np.array([float(r.get("rating",  0) or 0) for r in rows])
     reviews  = np.log1p(np.array([float(r.get("reviews", 0) or 0) for r in rows]))
     r_norm   = _norm(ratings)
     rv_norm  = _norm(reviews)
@@ -299,13 +299,10 @@ def _cosine_rerank(rows: list, purpose_query: str,
             print(f"[OccasionEngine] cosine error: {e}")
             cos_norm = np.zeros(n)
     else:
-        # Fallback: Naive word overlap if model is missing
-        query_words = set(purpose_query.lower().split())
-        overlap_scores = []
-        for r in rows:
-            text_words = set(_row_to_text(r).split())
-            overlap_scores.append(len(query_words.intersection(text_words)))
-        cos_norm  = _norm(np.array(overlap_scores, dtype=float))
+        cos_norm = np.zeros(n)
+        w_rating = w_rating + w_cosine * 0.6
+        w_review = w_review + w_cosine * 0.4
+        w_cosine = 0.0
 
     final = (w_cosine * cos_norm + w_cat * cat_score +
              w_rating * r_norm   + w_review * rv_norm)
@@ -352,31 +349,30 @@ def get_user_preferences(user_id):
 
 def _fetch_candidates(categories: list, min_p: float, max_p: float,
                       brand_filter: str = "") -> list:
+    """Fetch candidate products with multi-category fallback."""
     if not categories:
         return []
+    conn = None
     try:
         conn = get_db()
         cur  = conn.cursor(dictionary=True)
-        try:
-            cat_ph       = ",".join(["%s"] * len(categories))
-            brand_clause = "AND p.brand = %s" if brand_filter else ""
-            query = f"""
-                SELECT p.id, p.name, p.description, p.category,
-                       p.price, p.rating, p.reviews, p.image_url, p.brand
-                FROM products p
-                WHERE p.category IN ({cat_ph})
-                  AND p.price BETWEEN %s AND %s
-                  AND p.stock > 0
-                  {brand_clause}
-                ORDER BY p.rating DESC, p.reviews DESC
-                LIMIT 200
-            """
-            params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
-            cur.execute(query, params)
-            rows = cur.fetchall()
-        finally:
-            cur.close()
-            conn.close()
+        cat_ph       = ",".join(["%s"] * len(categories))
+        brand_clause = "AND p.brand = %s" if brand_filter else ""
+        query = f"""
+            SELECT p.id, p.name, p.description, p.category,
+                   p.price, p.rating, p.reviews, p.image_url, p.brand
+            FROM products p
+            WHERE p.category IN ({cat_ph})
+              AND p.price BETWEEN %s AND %s
+              AND p.stock > 0
+              {brand_clause}
+            ORDER BY p.rating DESC, p.reviews DESC
+            LIMIT 200
+        """
+        params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
+        cur.execute(query, params)
+        rows = cur.fetchall()
+        cur.close()
 
         for row in rows:
             row["price"]   = float(row["price"]  or 0)
@@ -387,6 +383,10 @@ def _fetch_candidates(categories: list, min_p: float, max_p: float,
         print(f"[fetch_candidates error] {e}")
         import traceback; traceback.print_exc()
         return []
+    finally:
+        if conn:
+            try: conn.close()
+            except: pass
 
 
 def fetch_occasion_products(occasion_key: str, prefs: dict, refinements: dict) -> list:
@@ -431,9 +431,17 @@ def fetch_outfit_set(occasion_key: str, prefs: dict, refinements: dict) -> dict:
 
     outfit = {}
     for slot_name, cats in slots.items():
+        # Try each category in priority order; widen budget if needed
         candidates = _fetch_candidates(cats, min_p, max_p, brand_filter)
+
         if not candidates:
+            # Widen budget by 50% and try again
+            candidates = _fetch_candidates(cats, 0, max_p * 1.5, brand_filter)
+
+        if not candidates:
+            print(f"[outfit] No candidates for slot={slot_name} cats={cats}")
             continue
+
         slot_q = slot_queries.get(slot_name, OCCASION_PURPOSE_QUERIES.get(occasion_key, ""))
         ranked = _cosine_rerank(candidates, slot_q, cats)
         best   = ranked[0] if ranked else None
@@ -470,7 +478,8 @@ def occasion_chat():
     occasion   = nlp_result["occasion"]
     confidence = nlp_result["confidence"]
 
-    print(f"[Occasion] msg='{message}' -> {occasion} conf={confidence} method={nlp_result['method']}")
+    # ASCII only in print to avoid Windows cp1252 crash
+    print(f"[Occasion] msg='{message}' => {occasion} conf={confidence} method={nlp_result['method']}")
 
     if not occasion or confidence < 0.15:
         return jsonify({
