@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from auto_trainer import start_auto_trainer
 from chatbot_route import chat_bp
 from unified_chat_route import unified_chat_bp
-from db import get_db
+from db import get_db, get_catalog_db
 load_dotenv()
 
 # ── Blueprint imports ──────────────────────────────────────────────
@@ -116,10 +116,10 @@ def get_image(filename):
 def get_products():
     conn = None
     try:
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM products")
-        products = cursor.fetchall()
+        conn = get_catalog_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM products LIMIT 500") # Limit to prevent huge payloads
+        products = [dict(row) for row in cursor.fetchall()]
         cursor.close()
         return jsonify(products)
     except Exception as e:
@@ -148,14 +148,14 @@ def test_db():
 def get_product_by_id(product_id):
     conn = None
     try:
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        conn = get_catalog_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
         product = cursor.fetchone()
         cursor.close()
         if not product:
             return jsonify({"error": "Product not found"}), 404
-        return jsonify(product)
+        return jsonify(dict(product))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:

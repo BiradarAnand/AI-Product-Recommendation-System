@@ -12,7 +12,7 @@ import BrandShowcase from "../components/BrandShowcase";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com" });
+const API = axios.create({ baseURL: "http://localhost:5000" });
 
 const HERO_SLIDES = [
   { image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=700&q=80", label: "Summer Edit 2026" },
@@ -43,15 +43,16 @@ const DEMO_PRODUCTS = [
   { id: 18, name: "Tech Fleece Hoodie",     brand: "Nike",   price: 3199, rating: 4.5, category: "Hoodies",      image_url: "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=600&q=80" },
 ];
 
-const CATEGORIES = ["All", "Shoes", "Shirts", "T-Shirts", "Pants", "Watches", "Hoodies"];
+const CATEGORIES = ["All", "Watches", "Shirts", "Jeans", "Casual Shoes", "Sports Shoes", "T-shirts and Polos", "Air Conditioners"];
 
 const CATEGORY_MAP = {
-  "Shoes":    ["shoes", "casual shoes", "sports shoes"],
-  "Shirts":   ["shirts"],
-  "T-Shirts": ["tshirts", "t-shirts", "t shirts"],
-  "Pants":    ["pants", "jeans", "track pants", "trousers"],
-  "Watches":  ["watches"],
-  "Hoodies":  ["hoodies"],
+  "Watches":            ["watches"],
+  "Shirts":             ["shirts"],
+  "Jeans":              ["jeans"],
+  "Casual Shoes":       ["casual shoes"],
+  "Sports Shoes":       ["sports shoes"],
+  "T-shirts and Polos": ["t-shirts and polos"],
+  "Air Conditioners":   ["air conditioners"],
 };
 
 const MINI_PRODUCTS = [
@@ -86,14 +87,13 @@ const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
 const getFallbackImage = (category = "") => {
   const cat = (category || "").toLowerCase().trim();
   const map = {
-    "shirts":       "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80",
-    "tshirts":      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
-    "jeans":        "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80",
-    "trousers":     "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&q=80",
-    "track pants":  "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80",
-    "casual shoes": "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80",
-    "sports shoes": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
-    "watches":      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+    "shirts":             "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80",
+    "t-shirts and polos": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
+    "jeans":              "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80",
+    "casual shoes":       "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80",
+    "sports shoes":       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "watches":            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+    "air conditioners":   "https://images.unsplash.com/photo-1628135876378-08b5f3d79f04?w=600&q=80"
   };
   return map[cat] || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80";
 };
@@ -342,8 +342,7 @@ export default function Home() {
 
   // ── Fetch products ──
   useEffect(() => {
-    axios
-      .get("https://ai-product-recommendation-system-by60.onrender.com/products")
+    API.get("/products")
       .then((res) => {
         const sorted = [...res.data].sort((a, b) => {
           const aGood = (a.image_url || "").startsWith("http");

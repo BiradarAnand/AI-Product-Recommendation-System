@@ -14,7 +14,7 @@ from flask import Blueprint, request, jsonify
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 from occasion_nlp import classify_occasion, OCCASION_LABELS, OCCASION_ICONS
-from db import get_db
+from db import get_db, get_catalog_db
 
 load_dotenv()
 
@@ -354,16 +354,16 @@ def _fetch_candidates(categories: list, min_p: float, max_p: float,
         return []
     conn = None
     try:
-        conn = get_db()
-        cur  = conn.cursor(dictionary=True)
-        cat_ph       = ",".join(["%s"] * len(categories))
-        brand_clause = "AND p.brand = %s" if brand_filter else ""
+        conn = get_catalog_db()
+        cur  = conn.cursor()
+        cat_ph       = ",".join(["?"] * len(categories))
+        brand_clause = "AND p.brand = ?" if brand_filter else ""
         query = f"""
             SELECT p.id, p.name, p.description, p.category,
                    p.price, p.rating, p.reviews, p.image_url, p.brand
             FROM products p
             WHERE p.category IN ({cat_ph})
-              AND p.price BETWEEN %s AND %s
+              AND p.price BETWEEN ? AND ?
               AND p.stock > 0
               {brand_clause}
             ORDER BY p.rating DESC, p.reviews DESC
@@ -371,7 +371,7 @@ def _fetch_candidates(categories: list, min_p: float, max_p: float,
         """
         params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
         cur.execute(query, params)
-        rows = cur.fetchall()
+        rows = [dict(row) for row in cur.fetchall()]
         cur.close()
 
         for row in rows:

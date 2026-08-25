@@ -230,58 +230,23 @@ def is_otp_valid(user_input: str, stored_otp: str, expires_at: datetime) -> tupl
 
 # ── EMAIL ─────────────────────────────────────────────────────────
 
+import requests
+
 def send_otp_email(name: str, email: str, otp: str) -> bool:
-    gmail_address = os.getenv("GMAIL_ADDRESS")
-    gmail_pass    = os.getenv("GMAIL_APP_PASS")
-
-    if not gmail_address or not gmail_pass:
-        print("[OTP Email] ERROR: GMAIL_ADDRESS or GMAIL_APP_PASS not set in .env")
-        return False
-
     try:
-        msg            = MIMEMultipart("alternative")
-        msg["Subject"] = "Your OTP Code"
-        msg["From"]    = gmail_address
-        msg["To"]      = email
-
-        plain = (
-            f"Hi {name},\n\n"
-            f"Your OTP is: {otp}\n\n"
-            f"It expires in 10 minutes. Do not share it with anyone."
-        )
-        html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;
-                    padding:32px;border:1px solid #e5e7eb;border-radius:12px;">
-            <h2 style="color:#1f2937;">Your OTP Code</h2>
-            <p style="color:#6b7280;">Hi {name}, use this code to verify your account:</p>
-            <div style="font-size:40px;font-weight:bold;letter-spacing:14px;
-                        text-align:center;padding:24px;background:#f9fafb;
-                        border-radius:8px;color:#1f2937;">{otp}</div>
-            <p style="color:#9ca3af;font-size:13px;margin-top:20px;">
-                Expires in 10 minutes. Do not share with anyone.
-            </p>
-        </div>"""
-
-        msg.attach(MIMEText(plain, "plain"))
-        msg.attach(MIMEText(html,  "html"))
-
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(gmail_address, gmail_pass)
-            server.sendmail(gmail_address, email, msg.as_string())
-
-        print(f"[OTP Email] Sent to {email} ✓")
-        return True
-
-    except smtplib.SMTPAuthenticationError:
-        print("[OTP Email] Authentication failed — check GMAIL_ADDRESS and GMAIL_APP_PASS in .env")
-        return False
-    except smtplib.SMTPException as e:
-        print(f"[OTP Email] SMTP error: {e}")
-        return False
+        response = requests.post("http://localhost:3001/api/send-otp", json={
+            "name": name,
+            "email": email,
+            "otp": otp
+        })
+        if response.status_code == 200:
+            print(f"[OTP Email] Sent to {email} via Node Microservice ✓")
+            return True
+        else:
+            print(f"[OTP Email] Error from Node service: {response.text}")
+            return False
     except Exception as e:
-        print(f"[OTP Email] Unexpected error: {e}")
+        print(f"[OTP Email] Failed to reach Node Microservice: {e}")
         return False
 
 

@@ -23,4 +23,12 @@ def get_db(retries=3, delay=2):
             else:
                 raise
 
-print("DB ready — fresh connection per request ✓")
+import sqlite3
+
+def get_catalog_db():
+    db_path = os.path.join(os.path.dirname(__file__), "amazon_catalog.db")
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+print("DB ready — fresh connection per request")
