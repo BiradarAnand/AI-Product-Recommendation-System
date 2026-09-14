@@ -159,7 +159,6 @@ def get_products_admin(user_id, email):
             SELECT id, name, brand, category, price, stock, rating, reviews, image_url
             FROM products
             ORDER BY id DESC
-            LIMIT 500
         """)
         products = cur.fetchall()
         cur.close(); conn.close()

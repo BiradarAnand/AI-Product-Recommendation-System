@@ -80,14 +80,41 @@ def import_all_data():
             
         filepath = os.path.join(CSV_DIR, filename)
         
-        # Derive a clean category name from the filename
-        fallback_category = filename.replace(".csv", "").replace("All ", "").strip()
+        # The necessary categories for the project based on your selection
+        ALLOWED_CATEGORIES = [
+            "Clothing",
+            "Mens Fashion",
+            "Womens Fashion",
+            "T-shirts and Polos",
+            "Jeans",
+            "Shoes",
+            "Amazon Fashion",
+            "Televisions",
+            "Headphones",
+            "Cameras",
+            "Furniture",
+            "All Home and Kitchen",
+            "Home Dcor",
+            "Camping and Hiking",
+            "All Sports Fitness and Outdoors"
+        ]
         
+        # Derive category name directly from filename (keep "All" prefix intact)
+        fallback_category = filename.replace(".csv", "").strip()
+        
+        # Only process categories we care about to keep the database focused
+        is_allowed = any(allowed.lower() == fallback_category.lower() for allowed in ALLOWED_CATEGORIES)
+        if not is_allowed:
+            continue
+            
         print(f"Processing {filename}...")
         try:
             df = pd.read_csv(filepath)
             
-            # Limit to top 500 per category to keep DB fast and light (~70k products total)
+            # 1. Clean data: Remove duplicates by product name
+            df = df.drop_duplicates(subset=['name'])
+            
+            # 2. Limit to top 500 per category to keep DB fast and light
             df = df.head(500)
             
             count = 0

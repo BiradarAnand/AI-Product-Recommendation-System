@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
+import requests as http_requests
 from flask_cors import CORS
 from flask_mail import Mail, Message
 from flask_jwt_extended import JWTManager   # ✅ FIXED: added JWTManager import
@@ -112,13 +113,34 @@ def health():
 def get_image(filename):
     return send_from_directory('images', filename)
 
+@app.route('/proxy-image')
+def proxy_image():
+    """Proxies Amazon CDN images through the backend to bypass hotlink blocking."""
+    image_url = request.args.get('url', '')
+    if not image_url or 'media-amazon.com' not in image_url:
+        return jsonify({"error": "Invalid or missing URL"}), 400
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.amazon.in/'
+        }
+        resp = http_requests.get(image_url, headers=headers, timeout=8, stream=True)
+        if resp.status_code == 200:
+            return Response(
+                resp.content,
+                content_type=resp.headers.get('Content-Type', 'image/jpeg')
+            )
+        return jsonify({"error": "Image not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/products")
 def get_products():
     conn = None
     try:
         conn = get_catalog_db()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM products LIMIT 500") # Limit to prevent huge payloads
+        cursor.execute("SELECT * FROM products") 
         products = [dict(row) for row in cursor.fetchall()]
         cursor.close()
         return jsonify(products)

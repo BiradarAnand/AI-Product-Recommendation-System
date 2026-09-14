@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import RecommendedProducts from "../components/RecommendedProducts";
 import { useQuickView } from "../components/ProductQuickView";
@@ -43,18 +43,6 @@ const DEMO_PRODUCTS = [
   { id: 18, name: "Tech Fleece Hoodie",     brand: "Nike",   price: 3199, rating: 4.5, category: "Hoodies",      image_url: "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=600&q=80" },
 ];
 
-const CATEGORIES = ["All", "Watches", "Shirts", "Jeans", "Casual Shoes", "Sports Shoes", "T-shirts and Polos", "Air Conditioners"];
-
-const CATEGORY_MAP = {
-  "Watches":            ["watches"],
-  "Shirts":             ["shirts"],
-  "Jeans":              ["jeans"],
-  "Casual Shoes":       ["casual shoes"],
-  "Sports Shoes":       ["sports shoes"],
-  "T-shirts and Polos": ["t-shirts and polos"],
-  "Air Conditioners":   ["air conditioners"],
-};
-
 const MINI_PRODUCTS = [
   { label: "Shirts",  price: "₹1399", img: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&q=80" },
   { label: "Watches", price: "₹5999", img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80" },
@@ -62,7 +50,6 @@ const MINI_PRODUCTS = [
 ];
 
 // ── Nav section modes ──────────────────────────────────────────────────────
-// "home" | "best-seller" | "new-releases" | "most-reviewed" | "sale"
 const NAV_SECTIONS = [
   { key: "home",         label: "Home" },
   { key: "best-seller",  label: "Best Seller" },
@@ -71,10 +58,84 @@ const NAV_SECTIONS = [
   { key: "sale",         label: "🔥 Sale" },
 ];
 
+// ── Category icons ──────────────────────────────────────────────────────────
+// Used on the "Shop by Category" tiles when we don't want to rely on a photo.
+const CATEGORY_ICONS = {
+  "clothing": "👕", "mens fashion": "🧔", "womens fashion": "👗",
+  "t-shirts and polos": "👕", "jeans": "👖", "shoes": "👟",
+  "casual shoes": "👟", "sports shoes": "🏃", "amazon fashion": "🛍️",
+  "watches": "⌚", "televisions": "📺", "headphones": "🎧",
+  "cameras": "📷", "furniture": "🛋️", "home and kitchen": "🍳",
+  "home dcor": "🖼️", "home décor": "🖼️", "camping and hiking": "⛺",
+  "sports fitness and outdoors": "🏋️", "shirts": "👔", "tshirts": "👕",
+  "trousers": "👖", "track pants": "🩳", "hoodies": "🧥",
+  "air conditioners": "❄️",
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const imgSrc = (p) => {
-  if (!p.image_url) return "";
+// Turn a raw, messy category string ("tv, audio & cameras", "All Electronics",
+// "womens fashion") into a clean display label ("TV, Audio & Cameras").
+const prettifyCategory = (raw) => {
+  const cleaned = (raw || "Other").trim().replace(/\s+/g, " ");
+  if (!cleaned) return "Other";
+  return cleaned
+    .split(" ")
+    .map((w) => (w.length <= 3 && w === w.toLowerCase() && !["&"].includes(w))
+      ? w.charAt(0).toUpperCase() + w.slice(1)
+      : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ")
+    .replace(/\bAnd\b/g, "and");
+};
+
+const categoryKey = (raw) => (raw || "other").trim().toLowerCase();
+
+const categoryIcon = (raw) => CATEGORY_ICONS[categoryKey(raw)] || "🛒";
+
+const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
+
+const getFallbackImage = (category = "") => {
+  const cat = categoryKey(category);
+  const map = {
+    "shirts":                        "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80",
+    "casual shoes":                  "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80",
+    "sports shoes":                  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "watches":                       "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+    "air conditioners":              "https://images.unsplash.com/photo-1628135876378-08b5f3d79f04?w=600&q=80",
+    "clothing":                      "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=600&q=80",
+    "mens fashion":                  "https://images.unsplash.com/photo-1617127365659-c47fa864d8bc?w=600&q=80",
+    "womens fashion":                "https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=600&q=80",
+    "t-shirts and polos":            "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
+    "jeans":                         "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80",
+    "shoes":                         "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
+    "amazon fashion":                "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80",
+    "televisions":                   "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=600&q=80",
+    "headphones":                    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80",
+    "cameras":                       "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80",
+    "furniture":                     "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=600&q=80",
+    "home and kitchen":              "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
+    "home dcor":                     "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80",
+    "camping and hiking":            "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80",
+    "sports fitness and outdoors":   "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80",
+    "tv, audio & cameras":           "https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=600&q=80",
+  };
+  if (map[cat]) return map[cat];
+  for (const key of Object.keys(map)) {
+    if (cat.includes(key) || key.includes(cat)) return map[key];
+  }
+  return "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80";
+};
+
+// Build the best-guess primary src for a product image.
+// - Unsplash demo images: bump to a larger, higher quality version.
+// - Amazon CDN images (media-amazon.com): these 403 when the browser sends a
+//   Referer header pointing at our own site — that's the "can't load image
+//   from URL" problem. Loading them with referrerPolicy="no-referrer" (set on
+//   the <img> itself, see ProductImage below) fixes the vast majority of
+//   these without needing a backend proxy at all.
+// - Anything else that's already an absolute URL: use as-is.
+const primarySrc = (p) => {
+  if (!p.image_url) return getFallbackImage(p.category);
   if (p.image_url.includes("unsplash.com")) {
     return p.image_url.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=90");
   }
@@ -82,21 +143,54 @@ const imgSrc = (p) => {
   return `https://ai-product-recommendation-system-by60.onrender.com/${p.image_url}`;
 };
 
-const getDiscount = (id) => 10 + (id * 7 + id * 3) % 26;
+// If the direct (no-referrer) load still fails — some Amazon images are
+// throttled by IP rather than referrer — fall back to the backend proxy
+// route before finally giving up and using a category placeholder.
+const proxySrc = (p) =>
+  `http://localhost:5000/proxy-image?url=${encodeURIComponent(p.image_url)}`;
 
-const getFallbackImage = (category = "") => {
-  const cat = (category || "").toLowerCase().trim();
-  const map = {
-    "shirts":             "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80",
-    "t-shirts and polos": "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80",
-    "jeans":              "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80",
-    "casual shoes":       "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80",
-    "sports shoes":       "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80",
-    "watches":            "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
-    "air conditioners":   "https://images.unsplash.com/photo-1628135876378-08b5f3d79f04?w=600&q=80"
+/**
+ * <ProductImage /> — a single place that owns the "image won't load" retry
+ * chain, so every card in the app behaves the same way:
+ *   1. direct URL, no-referrer            (fixes most Amazon 403s)
+ *   2. backend proxy (if it's an Amazon URL and step 1 failed)
+ *   3. category placeholder image
+ * While nothing has loaded yet, a soft skeleton shimmer is shown instead of
+ * a broken-image icon.
+ */
+function ProductImage({ product, alt, className = "", style = {}, eager = false }) {
+  const [step, setStep] = useState(0);       // 0 = primary, 1 = proxy, 2 = fallback
+  const [loaded, setLoaded] = useState(false);
+  const isAmazon = (product.image_url || "").includes("media-amazon.com");
+
+  const src =
+    step === 0 ? primarySrc(product)
+    : step === 1 && isAmazon ? proxySrc(product)
+    : getFallbackImage(product.category);
+
+  const handleError = () => {
+    if (step === 0 && isAmazon) setStep(1);
+    else if (step < 2) setStep(2);
   };
-  return map[cat] || "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=600&q=80";
-};
+
+  return (
+    <div className="relative w-full h-full">
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-gray-100 rounded-xl" />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        referrerPolicy="no-referrer"
+        onError={handleError}
+        onLoad={() => setLoaded(true)}
+        className={className}
+        style={{ ...style, opacity: loaded ? 1 : 0, transition: "opacity 0.25s ease" }}
+      />
+    </div>
+  );
+}
 
 // ── Section Page Component ─────────────────────────────────────────────────
 // Renders a dedicated full-section grid for Best Seller / New Releases / Most Reviewed / Sale
@@ -109,7 +203,6 @@ function SectionPage({
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 16;
 
-  // Sort / label logic per section
   const { title, subtitle, badge, sorted } = React.useMemo(() => {
     const copy = [...products];
     switch (sectionKey) {
@@ -117,15 +210,15 @@ function SectionPage({
         return {
           title:    "Best Sellers",
           subtitle: "Our highest-rated, most-loved products",
-          badge:    (p) => ({ text: "⭐ Best Seller", bg: "#fef9c3", color: "#92400e" }),
+          badge:    () => ({ text: "⭐ Best Seller", bg: "#fef9c3", color: "#92400e" }),
           sorted:   copy.sort((a, b) => (b.rating || 0) - (a.rating || 0)),
         };
       case "new-releases":
         return {
           title:    "New Releases",
           subtitle: "Fresh drops — just landed in our catalogue",
-          badge:    (p) => ({ text: "✨ New", bg: "#eff6ff", color: "#1e40af" }),
-          sorted:   copy.sort((a, b) => b.id - a.id), // highest id = newest
+          badge:    () => ({ text: "✨ New", bg: "#eff6ff", color: "#1e40af" }),
+          sorted:   copy.sort((a, b) => b.id - a.id),
         };
       case "most-reviewed":
         return {
@@ -138,10 +231,7 @@ function SectionPage({
         return {
           title:    "🔥 Sale",
           subtitle: "Biggest discounts right now — limited time only",
-          badge:    (p) => {
-            const d = getDiscount(p.id);
-            return { text: `${d}% OFF`, bg: "#fef2f2", color: "#b91c1c" };
-          },
+          badge:    (p) => ({ text: `${getDiscount(p.id)}% OFF`, bg: "#fef2f2", color: "#b91c1c" }),
           sorted:   copy.sort((a, b) => getDiscount(b.id) - getDiscount(a.id)),
         };
       default:
@@ -153,7 +243,6 @@ function SectionPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Section hero banner */}
       <div
         className="px-4 md:px-10 py-10 md:py-14 text-center"
         style={{
@@ -175,7 +264,6 @@ function SectionPage({
         </p>
       </div>
 
-      {/* Grid */}
       <section className="px-4 md:px-10 py-8 md:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-[1400px] mx-auto">
           {visible.map((product, idx) => {
@@ -190,15 +278,13 @@ function SectionPage({
                 onClick={() => { openQuickView(product); recordView(product); }}
               >
                 <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: 260 }}>
-                  <img
-                    src={imgSrc(product)}
+                  <ProductImage
+                    product={product}
                     alt={product.name}
-                    loading="lazy"
+                    className="product-img-zoom"
                     style={{ width: "100%", height: "100%", objectFit: "contain", padding: 10 }}
-                    onError={(e) => { e.target.onerror = null; e.target.src = getFallbackImage(product.category); }}
                   />
 
-                  {/* Rank badge for best seller / most reviewed */}
                   {(sectionKey === "best-seller" || sectionKey === "most-reviewed") && idx < 3 && (
                     <div className="absolute top-2 left-2 w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shadow-md"
                       style={{ background: ["#F5C518","#C0C0C0","#CD7F32"][idx], color: "#111" }}>
@@ -206,7 +292,6 @@ function SectionPage({
                     </div>
                   )}
 
-                  {/* Section-specific badge */}
                   {badgeInfo && (
                     <span
                       className="absolute top-2 right-2 text-xs font-bold px-2.5 py-1 rounded-full"
@@ -216,14 +301,12 @@ function SectionPage({
                     </span>
                   )}
 
-                  {/* Sale: show discount % on left too */}
                   {sectionKey === "sale" && (
                     <span className="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
                       {discount}% off
                     </span>
                   )}
 
-                  {/* Wishlist */}
                   <button
                     onClick={(e) => handleWishlist(e, product.id)}
                     className="absolute bottom-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-sm hover:scale-110 transition-transform"
@@ -267,7 +350,6 @@ function SectionPage({
           })}
         </div>
 
-        {/* Load more */}
         {sorted.length > page * PAGE_SIZE && (
           <div className="mt-10 text-center max-w-[1400px] mx-auto">
             <p className="text-sm text-gray-400 mb-4">
@@ -286,16 +368,104 @@ function SectionPage({
   );
 }
 
+// ── Product Card (shared by the collection grid & category rows) ──────────
+
+function ProductCard({ product, wishlistIds, addedCart, onOpen, onWishlist, onAddToCart, width }) {
+  return (
+    <div
+      className="product-card bg-white rounded-2xl shadow-sm overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer flex-shrink-0"
+      style={width ? { width } : undefined}
+      onClick={() => onOpen(product)}
+    >
+      <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: 220 }}>
+        <ProductImage
+          product={product}
+          alt={product.name}
+          className="product-img-zoom"
+          style={{ width: "100%", height: "100%", objectFit: "contain", padding: 10 }}
+        />
+        <span className="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
+          {getDiscount(product.id)}% off
+        </span>
+        <button
+          onClick={(e) => onWishlist(e, product.id)}
+          className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-sm hover:scale-110 transition-transform"
+        >
+          {wishlistIds.has(product.id) ? "❤️" : "🤍"}
+        </button>
+      </div>
+
+      <div className="p-4">
+        <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">{product.brand}</p>
+        <h3 className="font-bold text-gray-900 mt-1 text-sm leading-snug line-clamp-2">{product.name}</h3>
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-red-500 font-extrabold text-base">₹{product.price}</span>
+          <span className="text-xs text-gray-400">
+            <span className="text-yellow-400">★</span> {Number(product.rating || 0).toFixed(1)}
+          </span>
+        </div>
+        <button
+          onClick={(e) => onAddToCart(e, product.id, product.price)}
+          className={`mt-3 w-full py-2 rounded-full text-xs font-semibold transition-colors ${
+            addedCart[product.id]
+              ? "bg-green-500 text-white"
+              : "bg-gray-900 text-white hover:bg-yellow-400 hover:text-gray-900"
+          }`}
+        >
+          {addedCart[product.id] ? "✓ Added!" : "Add to Cart"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Category Row (horizontal scroller for a single category, homepage) ───
+
+function CategoryRow({ category, products, onSeeAll, cardProps }) {
+  const scrollerRef = useRef(null);
+  const scrollBy = (dx) => scrollerRef.current?.scrollBy({ left: dx, behavior: "smooth" });
+
+  if (products.length === 0) return null;
+
+  return (
+    <section className="py-8 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 md:px-10 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{categoryIcon(category)}</span>
+          <h3 className="font-display text-xl md:text-2xl font-black text-gray-900">
+            {prettifyCategory(category)}
+          </h3>
+          <span className="text-xs text-gray-400 font-medium">({products.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => onSeeAll(category)}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+            See all →
+          </button>
+          <button onClick={() => scrollBy(-320)} className="hidden md:flex w-8 h-8 rounded-full border border-gray-200 items-center justify-center hover:bg-gray-50">‹</button>
+          <button onClick={() => scrollBy(320)} className="hidden md:flex w-8 h-8 rounded-full border border-gray-200 items-center justify-center hover:bg-gray-50">›</button>
+        </div>
+      </div>
+      <div ref={scrollerRef} className="flex gap-4 overflow-x-auto px-4 md:px-10 pb-2 scroll-smooth" style={{ scrollbarWidth: "thin" }}>
+        {products.slice(0, 12).map((product) => (
+          <ProductCard key={product.id} product={product} width={210} {...cardProps} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ── Main Home Component ────────────────────────────────────────────────────
 
 export default function Home() {
   const [products, setProducts]             = useState([]);
   const [search, setSearch]                 = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("all");
   const [slideIndex, setSlideIndex]         = useState(0);
   const [slideOpacity, setSlideOpacity]     = useState(1);
   const [activeSection, setActiveSection]   = useState("home");
   const intervalRef                         = useRef(null);
+  const collectionRef                       = useRef(null);
   const navigate                            = useNavigate();
   const { openQuickView }                   = useQuickView();
 
@@ -335,6 +505,8 @@ export default function Home() {
         }
         .product-img-zoom { transition: transform 0.4s ease; }
         .product-card:hover .product-img-zoom { transform: scale(1.07); }
+        .no-scrollbar::-webkit-scrollbar { height: 6px; }
+        .no-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
       `;
       document.head.appendChild(style);
     }
@@ -415,31 +587,56 @@ export default function Home() {
     }, 400);
   };
 
+  // ── Dynamic categories, derived straight from whatever the API/DB returns ──
+  // (This replaces the old hardcoded CATEGORY_MAP, which only understood a
+  // handful of legacy names — anything imported from a new CSV/category just
+  // showed up as "0 products". Now every distinct `category` value in the
+  // data gets its own pill, tile, and homepage row automatically.)
+  const categories = useMemo(() => {
+    const counts = new Map();
+    products.forEach((p) => {
+      const key = categoryKey(p.category);
+      if (!counts.has(key)) counts.set(key, { key, raw: p.category, count: 0 });
+      counts.get(key).count += 1;
+    });
+    const list = Array.from(counts.values())
+      .map((c) => ({ ...c, label: prettifyCategory(c.raw) }))
+      .sort((a, b) => b.count - a.count);
+    return [{ key: "all", label: "All", count: products.length }, ...list];
+  }, [products]);
+
+  const productsByCategory = useMemo(() => {
+    const map = new Map();
+    products.forEach((p) => {
+      const key = categoryKey(p.category);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(p);
+    });
+    return map;
+  }, [products]);
+
   // ── Filtering (home page collection) ──
   const filtered = products.filter((p) => {
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.brand?.toLowerCase().includes(search.toLowerCase());
-    const dbCat = (p.category || "").trim().toLowerCase();
     const matchBrand = !activeBrand || (p.brand || "").toLowerCase() === activeBrand.toLowerCase();
-    const matchCat =
-      activeCategory === "All" ||
-      (CATEGORY_MAP[activeCategory] || []).includes(dbCat);
+    const matchCat = activeCategory === "all" || categoryKey(p.category) === activeCategory;
     return matchSearch && matchCat && matchBrand;
   });
 
-  const countFor = (cat) => {
-    if (cat === "All") return products.length;
-    return products.filter((p) =>
-      (CATEGORY_MAP[cat] || []).includes((p.category || "").trim().toLowerCase())
-    ).length;
+  const selectCategory = (key) => {
+    setActiveCategory(key);
+    setPage(1);
+    setActiveSection("home");
+    setTimeout(() => collectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   // ── ML search ──
   const handleMLSearch = async () => {
     if (!search.trim()) return;
     setShowHistory(false);
-    setActiveSection("home"); // go to home section to show results
+    setActiveSection("home");
     try {
       const res = await API.get("/api/recommend/search", {
         params: { q: search, top_n: 50 },
@@ -494,11 +691,11 @@ export default function Home() {
     }
   };
 
-  // ── Logout ──
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.reload();
+  const cardProps = {
+    wishlistIds, addedCart,
+    onOpen: (p) => { openQuickView(p); recordView(p); },
+    onWishlist: handleWishlist,
+    onAddToCart: handleAddToCart,
   };
 
   // ── Render ──
@@ -513,7 +710,6 @@ export default function Home() {
             RecoVibe<span className="text-yellow-400">.</span>
           </a>
 
-          {/* Desktop nav links */}
           <ul className="hidden lg:flex items-center gap-7 text-sm font-medium text-gray-800 list-none">
             <li>
               <button onClick={() => setActiveSection("home")}
@@ -566,9 +762,7 @@ export default function Home() {
             )}
           </ul>
 
-          {/* NAVBAR RIGHT */}
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Search — hidden on small, shown on md+ */}
             <div ref={searchRef} className="relative hidden md:block">
               <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden focus-within:border-yellow-400 transition-colors bg-white">
                 <input
@@ -601,7 +795,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Cart */}
             <Link to="/cart" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
               🛒
               {cartCount > 0 && (
@@ -612,7 +805,6 @@ export default function Home() {
               <span className="ml-1 hidden sm:inline">Cart</span>
             </Link>
 
-            {/* Wishlist */}
             <Link to="/wishlist" className="relative flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-yellow-500 transition-colors no-underline">
               ❤️
               {wishlistCount > 0 && (
@@ -623,7 +815,6 @@ export default function Home() {
               <span className="ml-1 hidden sm:inline">Wishlist</span>
             </Link>
 
-            {/* Login / Avatar */}
             {isLoggedIn ? (
               <Link to="/profile" title={user?.name || user?.email || "My Profile"} style={{ textDecoration: "none" }}>
                 <div style={{
@@ -648,7 +839,6 @@ export default function Home() {
               </Link>
             )}
 
-            {/* Hamburger — mobile only */}
             <button
               className="lg:hidden flex flex-col justify-center items-center w-9 h-9 rounded-lg hover:bg-gray-100 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -661,10 +851,28 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Mobile dropdown menu */}
+        {/* Category strip — always visible under the navbar on desktop */}
+        {activeSection === "home" && categories.length > 1 && (
+          <div className="hidden md:flex items-center gap-5 px-10 py-2.5 border-t border-gray-100 overflow-x-auto no-scrollbar">
+            {categories.slice(0, 12).map((cat) => (
+              <button
+                key={cat.key}
+                onClick={() => selectCategory(cat.key)}
+                className={`whitespace-nowrap text-xs font-semibold pb-1 border-b-2 transition-colors ${
+                  activeCategory === cat.key
+                    ? "border-yellow-400 text-gray-900"
+                    : "border-transparent text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                {cat.key !== "all" && <span className="mr-1">{categoryIcon(cat.raw)}</span>}
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {mobileMenuOpen && (
           <div className="lg:hidden bg-white border-t border-gray-100 px-4 pb-4 space-y-1">
-            {/* Mobile search */}
             <div className="flex items-center border-2 border-gray-200 rounded-full overflow-hidden focus-within:border-yellow-400 mb-3 mt-2">
               <input
                 type="text"
@@ -689,6 +897,22 @@ export default function Home() {
                   activeSection === key ? "bg-yellow-400 text-gray-900" : "text-gray-700 hover:bg-gray-50"
                 }`}>{label}</button>
             ))}
+            {categories.length > 1 && (
+              <div className="pt-2">
+                <p className="px-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Categories</p>
+                <div className="flex flex-wrap gap-2 px-3">
+                  {categories.slice(0, 14).map((cat) => (
+                    <button key={cat.key}
+                      onClick={() => { selectCategory(cat.key); setMobileMenuOpen(false); }}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${
+                        activeCategory === cat.key ? "bg-yellow-400 border-yellow-400 text-gray-900" : "border-gray-200 text-gray-600"
+                      }`}>
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               onClick={() => { setActiveSection("home"); setMobileMenuOpen(false); setTimeout(() => { const chatBtn = document.querySelector('[aria-label="Toggle chat"]'); if (chatBtn) chatBtn.click(); }, 100); }}
               className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">
@@ -713,7 +937,6 @@ export default function Home() {
       {/* ── SECTION PAGES (Best Seller / New Releases / Most Reviewed / Sale) ── */}
       {activeSection !== "home" && products.length > 0 && (
         <>
-          {/* Back to home breadcrumb */}
           <div className="px-4 md:px-10 py-3 bg-white border-b border-gray-100 flex items-center gap-2 text-sm">
             <button
               onClick={() => setActiveSection("home")}
@@ -745,8 +968,6 @@ export default function Home() {
 
           {/* ── HERO ── */}
           <section className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center px-4 md:px-10 lg:px-20 py-10 md:py-16 max-w-[1400px] mx-auto [&>*]:min-w-0">
-
-            {/* LEFT */}
             <div className="relative z-10 order-2 md:order-1">
               <span className="inline-block bg-yellow-400 text-gray-900 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4 md:mb-6">
                 ✨ New Season 2026
@@ -787,7 +1008,7 @@ export default function Home() {
                 {MINI_PRODUCTS.map((mp) => (
                   <div key={mp.label} className="bg-white rounded-2xl shadow-md overflow-hidden w-24 md:w-28 cursor-pointer hover:-translate-y-1 transition-transform">
                     <div className="relative">
-                      <img src={mp.img} alt={mp.label} className="w-full h-16 md:h-20 object-cover" />
+                      <img src={mp.img} alt={mp.label} referrerPolicy="no-referrer" className="w-full h-16 md:h-20 object-cover" />
                       <span className="absolute top-1.5 left-1.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                         15% Off
                       </span>
@@ -801,26 +1022,23 @@ export default function Home() {
               </div>
             </div>
 
-            {/* RIGHT */}
             <div className="relative z-10 flex justify-center items-center order-1 md:order-2">
               <div className="relative w-full max-w-lg">
-
-                {/* Shoppers pill */}
                 <div className="absolute -top-4 right-2 md:right-6 flex items-center bg-white rounded-full px-3 py-1.5 shadow-lg z-20">
                   {[1, 2, 3, 4].map((i) => (
-                    <img key={i} src={`https://i.pravatar.cc/40?img=${i}`} alt={`user${i}`}
+                    <img key={i} src={`https://i.pravatar.cc/40?img=${i}`} alt={`user${i}`} referrerPolicy="no-referrer"
                       className="w-6 h-6 md:w-7 md:h-7 rounded-full border-2 border-white object-cover -ml-1.5 first:ml-0" />
                   ))}
                   <span className="text-xs font-semibold ml-2 text-gray-800">10k+ Shoppers</span>
                 </div>
 
-                {/* Hero image slider */}
                 <div className="relative overflow-hidden rounded-2xl md:rounded-3xl shadow-2xl" style={{ height: "clamp(280px, 50vw, 580px)" }}>
                   {HERO_SLIDES.map((slide, i) => (
                     <img
                       key={slide.image}
                       src={slide.image}
                       alt={slide.label}
+                      referrerPolicy="no-referrer"
                       className="absolute inset-0 w-full h-full"
                       style={{
                         objectFit: "cover",
@@ -856,18 +1074,17 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Floating sneaker card — hidden on small screens to prevent overflow */}
                 <div className="hidden md:block absolute top-1/4 -left-14 bg-white rounded-2xl shadow-xl p-3 z-20">
                   <img
                     src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=120&q=80"
                     alt="sneaker"
+                    referrerPolicy="no-referrer"
                     className="w-16 h-16 object-contain"
                   />
                   <p className="text-xs font-bold text-gray-900 mt-1">Sneaker</p>
                   <span className="text-xs font-bold text-red-500">₹2,999</span>
                 </div>
 
-                {/* Floating review card — hidden on small screens to prevent overflow */}
                 <div className="hidden md:block absolute bottom-8 -right-12 bg-white rounded-2xl shadow-xl px-4 py-3 z-20">
                   <p className="text-sm font-bold text-gray-900">10k+ Reviews</p>
                   <p className="text-yellow-400 text-sm mt-0.5">★★★★★</p>
@@ -877,14 +1094,14 @@ export default function Home() {
             </div>
           </section>
 
-          {/* ── QUICK NAVIGATION CARDS (replaces dead nav clicks with visual CTAs) ── */}
+          {/* ── QUICK NAVIGATION CARDS ── */}
           <section className="px-4 md:px-10 py-8 md:py-10 bg-white">
             <div className="max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4">
               {[
                 { key: "best-seller",   icon: "🏆", label: "Best Sellers",   sub: "Highest rated picks",    bg: "#fffbeb", border: "#F5C518"  },
                 { key: "new-releases",  icon: "✨", label: "New Releases",   sub: "Just arrived",           bg: "#eff6ff", border: "#93c5fd"  },
                 { key: "most-reviewed", icon: "💬", label: "Most Reviewed",  sub: "Customer favourites",    bg: "#f0fdf4", border: "#86efac"  },
-                { key: "sale",          icon: "🔥", label: "Sale",           sub: "Up to 36% off",          bg: "#fff1f2", border: "#fca5a5"  },
+                { key: "sale",          icon: "🔥", label: "Sale",           sub: "Big discounts right now", bg: "#fff1f2", border: "#fca5a5"  },
               ].map((card) => (
                 <button
                   key={card.key}
@@ -902,6 +1119,49 @@ export default function Home() {
             </div>
           </section>
 
+          {/* ── SHOP BY CATEGORY ── */}
+          {categories.length > 1 && (
+            <section className="px-4 md:px-10 py-10 md:py-14 bg-gray-50">
+              <div className="max-w-[1400px] mx-auto">
+                <div className="text-center mb-8">
+                  <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">Shop by Category</h2>
+                  <p className="text-gray-500 mt-3 text-base">Jump straight to what you're after</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  {categories.filter((c) => c.key !== "all").slice(0, 10).map((cat) => {
+                    const sample = (productsByCategory.get(cat.key) || [])[0];
+                    return (
+                      <button
+                        key={cat.key}
+                        onClick={() => selectCategory(cat.key)}
+                        className={`group bg-white rounded-2xl overflow-hidden border-2 text-left hover:-translate-y-1 hover:shadow-lg transition-all ${
+                          activeCategory === cat.key ? "border-yellow-400" : "border-gray-100"
+                        }`}
+                      >
+                        <div className="relative bg-gray-50" style={{ height: 110 }}>
+                          {sample ? (
+                            <ProductImage
+                              product={sample}
+                              alt={cat.label}
+                              className="group-hover:scale-105 transition-transform duration-300"
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-4xl">{categoryIcon(cat.raw)}</div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="font-bold text-gray-900 text-sm leading-snug line-clamp-1">{cat.label}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{cat.count} items</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* ── TRENDING TICKER ── */}
           <TrendingTicker />
 
@@ -911,35 +1171,52 @@ export default function Home() {
           {/* ── FLASH DEALS ── */}
           <FlashDeals onProductClick={(p) => { openQuickView(p); recordView(p); }} />
 
+          {/* ── PER-CATEGORY ROWS (only when browsing "All") ── */}
+          {activeCategory === "all" && !search && (
+            <div className="bg-white">
+              {categories.filter((c) => c.key !== "all").slice(0, 6).map((cat) => (
+                <CategoryRow
+                  key={cat.key}
+                  category={cat.raw}
+                  products={productsByCategory.get(cat.key) || []}
+                  onSeeAll={() => selectCategory(cat.key)}
+                  cardProps={cardProps}
+                />
+              ))}
+            </div>
+          )}
+
           {/* ── RECENTLY VIEWED ── */}
           <RecentlyViewed onProductClick={(p) => { openQuickView(p); recordView(p); }} />
 
           {/* ── BRAND SHOWCASE ── */}
           <BrandShowcase onBrandSelect={(b) => { setActiveBrand(b); setPage(1); }} />
 
-          {/* ── COLLECTION ── */}
-          <section className="px-4 md:px-10 py-10 md:py-20 bg-gray-50" id="collection">
+          {/* ── COLLECTION (full, filterable grid) ── */}
+          <section ref={collectionRef} className="px-4 md:px-10 py-10 md:py-20 bg-gray-50 scroll-mt-24" id="collection">
             <div className="text-center mb-8 md:mb-10">
-              <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">Our Collection</h2>
+              <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">
+                {activeCategory === "all" ? "Our Collection" : categories.find(c => c.key === activeCategory)?.label}
+              </h2>
               <p className="text-gray-500 mt-3 text-base">Discover the latest trends in fashion</p>
             </div>
 
-            {/* Category pills */}
+            {/* Category pills — dynamic, generated straight from the data */}
             <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => { setActiveCategory(cat); setPage(1); }}
+                  key={cat.key}
+                  onClick={() => { setActiveCategory(cat.key); setPage(1); }}
                   className={`px-6 py-2.5 rounded-full border-2 text-sm font-semibold transition-all
-                    ${activeCategory === cat
+                    ${activeCategory === cat.key
                       ? "bg-yellow-400 border-yellow-400 text-gray-900 shadow-md"
                       : "bg-white border-gray-200 text-gray-700 hover:border-gray-900"
                     }`}
                 >
-                  {cat}
+                  {cat.label}
                   <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full
-                    ${activeCategory === cat ? "bg-yellow-500 text-white" : "bg-gray-100 text-gray-500"}`}>
-                    {countFor(cat)}
+                    ${activeCategory === cat.key ? "bg-yellow-500 text-white" : "bg-gray-100 text-gray-500"}`}>
+                    {cat.count}
                   </span>
                 </button>
               ))}
@@ -949,74 +1226,15 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {filtered.length === 0 ? (
                 <div className="col-span-4 text-center py-16 text-gray-400 text-base">
-                  😕 No products found in <strong>{activeCategory}</strong>.
+                  😕 No products found{activeCategory !== "all" ? " in this category" : ""}.
                 </div>
               ) : (
                 filtered.slice(0, page * PAGE_SIZE).map((product) => (
-                  <div
-                    key={product.id}
-                    className="product-card bg-white rounded-2xl shadow-sm overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer"
-                    onClick={() => { openQuickView(product); recordView(product); }}
-                  >
-                    <div
-                      className="relative overflow-hidden bg-gray-50 flex items-center justify-center"
-                      style={{ height: "260px", padding: "0" }}
-                    >
-                      <img
-                        src={imgSrc(product)}
-                        alt={product.name}
-                        loading="eager"
-                        decoding="sync"
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "contain",
-                          objectPosition: "center",
-                          display: "block",
-                          padding: "10px",
-                        }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = getFallbackImage(product.category);
-                        }}
-                      />
-                      <span className="absolute top-2 left-2 bg-red-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full">
-                        {getDiscount(product.id)}% off
-                      </span>
-                      <button
-                        onClick={(e) => handleWishlist(e, product.id)}
-                        className="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md text-sm hover:scale-110 transition-transform"
-                      >
-                        {wishlistIds.has(product.id) ? "❤️" : "🤍"}
-                      </button>
-                    </div>
-
-                    <div className="p-4">
-                      <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">{product.brand}</p>
-                      <h3 className="font-bold text-gray-900 mt-1 text-sm leading-snug">{product.name}</h3>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="text-red-500 font-extrabold text-base">₹{product.price}</span>
-                        <span className="text-xs text-gray-400">
-                          <span className="text-yellow-400">★</span> {product.rating}
-                        </span>
-                      </div>
-                      <button
-                        onClick={(e) => handleAddToCart(e, product.id, product.price)}
-                        className={`mt-3 w-full py-2 rounded-full text-xs font-semibold transition-colors ${
-                          addedCart[product.id]
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-900 text-white hover:bg-yellow-400 hover:text-gray-900"
-                        }`}
-                      >
-                        {addedCart[product.id] ? "✓ Added!" : "Add to Cart"}
-                      </button>
-                    </div>
-                  </div>
+                  <ProductCard key={product.id} product={product} {...cardProps} />
                 ))
               )}
             </div>
 
-            {/* Load More */}
             {filtered.length > page * PAGE_SIZE && (
               <div className="mt-10 text-center">
                 <p className="text-sm text-gray-400 mb-4">
