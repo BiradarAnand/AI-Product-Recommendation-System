@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
-const BASE = "https://ai-product-recommendation-system-by60.onrender.com";
+const BASE = "http://localhost:5000";
 const API  = axios.create({ baseURL: BASE });
 
 function imgSrc(url) {

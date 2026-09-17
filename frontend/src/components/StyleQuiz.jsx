@@ -5,7 +5,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com" });
+const API = axios.create({ baseURL: "http://localhost:5000" });
 
 const STEPS = [
   {
@@ -80,7 +80,7 @@ function ResultCard({ product, onProductClick }) {
     >
       <div style={{ height: 140, background: "#f8f8f6", overflow: "hidden" }}>
         <img
-          src={product.image_url?.startsWith("http") ? product.image_url : `https://ai-product-recommendation-system-by60.onrender.com/${product.image_url}`}
+          src={product.image_url?.startsWith("http") ? product.image_url : `http://localhost:5000/${product.image_url}`}
           alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "contain", padding: 10 }}
           onError={e => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400&q=80"; }}

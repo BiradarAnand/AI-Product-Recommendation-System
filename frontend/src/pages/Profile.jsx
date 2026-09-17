@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const BASE = "https://ai-product-recommendation-system-by60.onrender.com";
+const BASE = "http://localhost:5000";
 const API = axios.create({ baseURL: BASE });
 
 const FONT_DISPLAY = "'Playfair Display', serif";

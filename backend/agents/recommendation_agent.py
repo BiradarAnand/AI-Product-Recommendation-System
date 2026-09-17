@@ -1,6 +1,9 @@
 import os
+from dotenv import load_dotenv
 from groq import Groq
 from .base_agent import BaseAgent
+
+load_dotenv()
 
 from occasion_nlp import classify_occasion, OCCASION_LABELS, OCCASION_ICONS
 from occasion_engine import (
@@ -13,6 +16,7 @@ from occasion_engine import (
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 OCCASION_CONFIDENCE_THRESHOLD = 0.15
+
 
 class RecommendationAgent(BaseAgent):
     def __init__(self):
@@ -34,11 +38,11 @@ class RecommendationAgent(BaseAgent):
         prefs = get_user_preferences(user_id) if user_id else {}
 
         nlp_result = classify_occasion(message)
-        occasion   = nlp_result["occasion"]
+        occasion = nlp_result["occasion"]
         confidence = nlp_result["confidence"]
-        nlp_meta   = {
-            "confidence":   confidence,
-            "method":       nlp_result["method"],
+        nlp_meta = {
+            "confidence": confidence,
+            "method": nlp_result["method"],
             "alternatives": nlp_result.get("alternatives", []),
         }
 
@@ -50,9 +54,9 @@ class RecommendationAgent(BaseAgent):
             }
 
         try:
-            outfit   = fetch_outfit_set(occasion, prefs, refinements)
+            outfit = fetch_outfit_set(occasion, prefs, refinements)
             products = fetch_occasion_products(occasion, prefs, refinements)
-            top12    = products[:12]
+            top12 = products[:12]
 
             if not outfit and not top12:
                 return {
@@ -130,7 +134,7 @@ Keep it conversational, encouraging, and specific. Use ₹ for prices.
         messages.append({"role": "user", "content": message})
 
         resp = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.7,
             max_tokens=400,

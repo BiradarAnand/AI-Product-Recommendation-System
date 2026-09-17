@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { recordView } from "./RecentlyViewed";
 
-const BASE = "https://ai-product-recommendation-system-by60.onrender.com";
+const BASE = "http://localhost:5000";
 const API  = axios.create({ baseURL: BASE });
 
 // ── Context ────────────────────────────────────────────────────────────────

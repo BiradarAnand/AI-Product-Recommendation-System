@@ -113,6 +113,67 @@ SLOT_PURPOSE_QUERIES = {
     },
 }
 
+# ── Maps chatbot intent-category names → real SQLite catalog filters ─────────
+# The catalog DB has:
+#   category     → "men's clothing" | "sports & fitness" | "women's shoes" | ...
+#   sub_category → "Jeans" | "T-shirts & Polos" | "Shoes" | "All Sports..." | ...
+INTENT_TO_DB_MAP = {
+    "Shirts":       {"cat": "men's clothing",   "sub": None},
+    "Tshirts":      {"cat": "men's clothing",   "sub": "T-shirts"},
+    "Blazers":      {"cat": "men's clothing",   "sub": None},
+    "Kurtas":       {"cat": "men's clothing",   "sub": None},
+    "Ethnic Wear":  {"cat": "men's clothing",   "sub": None},
+    "Jeans":        {"cat": "men's clothing",   "sub": "Jeans"},
+    "Trousers":     {"cat": "men's clothing",   "sub": None},
+    "Track Pants":  {"cat": "sports & fitness", "sub": None},
+    "Activewear":   {"cat": "sports & fitness", "sub": None},
+    "Shorts":       {"cat": "sports & fitness", "sub": None},
+    "Caps":         {"cat": "sports & fitness", "sub": None},
+    "Sports Shoes": {"cat": "sports & fitness", "sub": "All Sports"},
+    "Casual Shoes": {"cat": "women's shoes",    "sub": None},
+    "Formal Shoes": {"cat": "women's shoes",    "sub": None},
+    "Sneakers":     {"cat": "women's shoes",    "sub": None},
+    "Watches":      {"cat": None,               "sub": None,  "kw": "watch"},
+    "Sunglasses":   {"cat": None,               "sub": None,  "kw": "sungl"},
+}
+
+
+def _build_category_clause(categories: list) -> tuple:
+    """Return (sql_fragment, params_list) for a list of intent category names."""
+    if not categories:
+        return "1=0", []
+    clauses, params = [], []
+    for cat in categories:
+        mapping = INTENT_TO_DB_MAP.get(cat)
+        if mapping:
+            cat_val = mapping.get("cat")
+            sub_val = mapping.get("sub")
+            kw_val  = mapping.get("kw")
+            if cat_val and sub_val:
+                clauses.append(
+                    "(LOWER(p.category) LIKE ? AND LOWER(p.sub_category) LIKE ?)"
+                )
+                params.extend([f"%{cat_val.lower()}%", f"%{sub_val.lower()}%"])
+            elif cat_val:
+                clauses.append("LOWER(p.category) LIKE ?")
+                params.append(f"%{cat_val.lower()}%")
+            elif kw_val:
+                clauses.append(
+                    "(LOWER(p.name) LIKE ? OR LOWER(p.sub_category) LIKE ? OR LOWER(p.description) LIKE ?)"
+                )
+                params.extend([f"%{kw_val}%", f"%{kw_val}%", f"%{kw_val}%"])
+        else:
+            # Unknown category — broad keyword fallback
+            kw = cat.lower()
+            clauses.append(
+                "(LOWER(p.name) LIKE ? OR LOWER(p.sub_category) LIKE ? OR LOWER(p.category) LIKE ?)"
+            )
+            params.extend([f"%{kw}%", f"%{kw}%", f"%{kw}%"])
+    if not clauses:
+        return "1=0", []
+    return "(" + " OR ".join(clauses) + ")", params
+
+
 # ── Categories use REAL DB values ────────────────────────────────────
 OCCASION_CATEGORIES = {
     "job_interview": {
@@ -349,35 +410,48 @@ def get_user_preferences(user_id):
 
 def _fetch_candidates(categories: list, min_p: float, max_p: float,
                       brand_filter: str = "") -> list:
-    """Fetch candidate products with multi-category fallback."""
+    """Fetch candidate products matching intent categories from the SQLite catalog.
+
+    Translates chatbot intent names (e.g. 'Shirts', 'Jeans') into real
+    DB category/sub_category LIKE filters via INTENT_TO_DB_MAP.
+    """
     if not categories:
         return []
     conn = None
     try:
         conn = get_catalog_db()
         cur  = conn.cursor()
-        cat_ph       = ",".join(["?"] * len(categories))
-        brand_clause = "AND p.brand = ?" if brand_filter else ""
+
+        cat_clause, cat_params = _build_category_clause(categories)
+        brand_clause = "AND LOWER(p.brand) LIKE ?" if brand_filter else ""
+        price_clause = "AND p.price BETWEEN ? AND ?" if max_p > 0 else ""
+
         query = f"""
-            SELECT p.id, p.name, p.description, p.category,
+            SELECT p.id, p.name, p.description, p.category, p.sub_category,
                    p.price, p.rating, p.reviews, p.image_url, p.brand
             FROM products p
-            WHERE p.category IN ({cat_ph})
-              AND p.price BETWEEN ? AND ?
-              AND p.stock > 0
+            WHERE {cat_clause}
+              {price_clause}
               {brand_clause}
             ORDER BY p.rating DESC, p.reviews DESC
             LIMIT 200
         """
-        params = (*categories, min_p, max_p, *([brand_filter] if brand_filter else []))
+        params = list(cat_params)
+        if price_clause:
+            params.extend([min_p, max_p])
+        if brand_filter:
+            params.append(f"%{brand_filter.lower()}%")
+
         cur.execute(query, params)
         rows = [dict(row) for row in cur.fetchall()]
         cur.close()
 
         for row in rows:
-            row["price"]   = float(row["price"]  or 0)
-            row["rating"]  = float(row["rating"] or 0)
-            row["reviews"] = int(row["reviews"]  or 0)
+            row["price"]    = float(row.get("price")   or 0)
+            row["rating"]   = float(row.get("rating")  or 0)
+            row["reviews"]  = int(row.get("reviews")   or 0)
+            # Use sub_category as the display category when available
+            row["category"] = row.get("sub_category") or row.get("category") or ""
         return rows
     except Exception as e:
         print(f"[fetch_candidates error] {e}")

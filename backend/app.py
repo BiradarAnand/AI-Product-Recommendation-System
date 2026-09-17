@@ -70,7 +70,6 @@ app.register_blueprint(auth_bp,        url_prefix="/api/auth")
 app.register_blueprint(recommend_bp,   url_prefix="/api")
 app.register_blueprint(data_bp,        url_prefix="/api")
 app.register_blueprint(occasion_bp)
-app.register_blueprint(chat_bp)
 app.register_blueprint(unified_chat_bp)
 app.register_blueprint(admin_bp,       url_prefix="/api/admin")
 

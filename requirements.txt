@@ -1,3 +1,4 @@
+# one more thing the recommending products should take the input from the users in chat boot AI should ask some questions like if while the user details are stored in mysql database based on that it should recommend perfect outfit like it take input make or female with respect to that it should recommend
 absl-py==2.4.0
 acres==0.5.0
 aiofiles==24.1.0

@@ -140,7 +140,7 @@ const primarySrc = (p) => {
     return p.image_url.replace(/w=\d+/, "w=800").replace(/q=\d+/, "q=90");
   }
   if (p.image_url.startsWith("http")) return p.image_url;
-  return `https://ai-product-recommendation-system-by60.onrender.com/${p.image_url}`;
+  return `http://localhost:5000/${p.image_url}`;
 };
 
 // If the direct (no-referrer) load still fails — some Amazon images are

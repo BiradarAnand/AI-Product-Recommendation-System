@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuickView } from "./ProductQuickView";
 import axios from "axios";
 
-const API = axios.create({ baseURL: "https://ai-product-recommendation-system-by60.onrender.com/api" });
+const API = axios.create({ baseURL: "http://localhost:5000/api" });
 
 // Category-specific fallback images
 const CATEGORY_IMAGES = {
@@ -31,7 +31,7 @@ const getProductImage = (product) => {
   const url = product.image_url || "";
   if (url.includes("unsplash.com")) return url;
   if (url.startsWith("http"))       return url;
-  if (url)                          return `https://ai-product-recommendation-system-by60.onrender.com/${url}`;
+  if (url)                          return `http://localhost:5000/${url}`;
   return getFallbackImage(product.category);
 };
 
@@ -295,7 +295,7 @@ export default function RecommendedProducts() {
 // import { useNavigate } from "react-router-dom";
 // import axios from "axios";
 
-// const BASE = "https://ai-product-recommendation-system-by60.onrender.com";
+// const BASE = "http://localhost:5000";
 // const API  = axios.create({ baseURL: BASE });
 
 // function imgSrc(url) {

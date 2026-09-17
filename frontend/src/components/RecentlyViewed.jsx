@@ -89,7 +89,7 @@ export default function RecentlyViewed({ onProductClick }) {
             const discount = getDiscount(product.id);
             const imgSrc   = product.image_url?.startsWith("http")
               ? product.image_url
-              : `https://ai-product-recommendation-system-by60.onrender.com/${product.image_url}`;
+              : `http://localhost:5000/${product.image_url}`;
 
             return (
               <div
