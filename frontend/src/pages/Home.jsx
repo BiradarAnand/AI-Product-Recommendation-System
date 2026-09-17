@@ -242,13 +242,13 @@ function SectionPage({
   const visible = sorted.slice(0, page * PAGE_SIZE);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div
         className="px-4 md:px-10 py-10 md:py-14 text-center"
         style={{
           background: sectionKey === "sale"
             ? "linear-gradient(135deg,#111 0%,#1f1f1f 100%)"
-            : "linear-gradient(135deg,#fff 0%,#f9f7f2 100%)",
+            : "linear-gradient(135deg,#fff 0%,#fff 100%)",
           borderBottom: "1px solid #e5e7eb",
         }}
       >
@@ -277,7 +277,7 @@ function SectionPage({
                 className="product-card bg-white rounded-2xl shadow-sm overflow-hidden hover:-translate-y-2 hover:shadow-xl transition-all duration-300 cursor-pointer"
                 onClick={() => { openQuickView(product); recordView(product); }}
               >
-                <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: 260 }}>
+                <div className="relative overflow-hidden bg-white flex items-center justify-center" style={{ height: 260 }}>
                   <ProductImage
                     product={product}
                     alt={product.name}
@@ -377,7 +377,7 @@ function ProductCard({ product, wishlistIds, addedCart, onOpen, onWishlist, onAd
       style={width ? { width } : undefined}
       onClick={() => onOpen(product)}
     >
-      <div className="relative overflow-hidden bg-gray-50 flex items-center justify-center" style={{ height: 220 }}>
+      <div className="relative overflow-hidden bg-white flex items-center justify-center" style={{ height: 220 }}>
         <ProductImage
           product={product}
           alt={product.name}
@@ -700,7 +700,7 @@ export default function Home() {
 
   // ── Render ──
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-white min-h-screen">
 
       {/* ── NAVBAR ── */}
       <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
@@ -1121,7 +1121,7 @@ export default function Home() {
 
           {/* ── SHOP BY CATEGORY ── */}
           {categories.length > 1 && (
-            <section className="px-4 md:px-10 py-10 md:py-14 bg-gray-50">
+            <section className="px-4 md:px-10 py-10 md:py-14 bg-white">
               <div className="max-w-[1400px] mx-auto">
                 <div className="text-center mb-8">
                   <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">Shop by Category</h2>
@@ -1138,7 +1138,7 @@ export default function Home() {
                           activeCategory === cat.key ? "border-yellow-400" : "border-gray-100"
                         }`}
                       >
-                        <div className="relative bg-gray-50" style={{ height: 110 }}>
+                        <div className="relative bg-white" style={{ height: 110 }}>
                           {sample ? (
                             <ProductImage
                               product={sample}
@@ -1193,7 +1193,7 @@ export default function Home() {
           <BrandShowcase onBrandSelect={(b) => { setActiveBrand(b); setPage(1); }} />
 
           {/* ── COLLECTION (full, filterable grid) ── */}
-          <section ref={collectionRef} className="px-4 md:px-10 py-10 md:py-20 bg-gray-50 scroll-mt-24" id="collection">
+          <section ref={collectionRef} className="px-4 md:px-10 py-10 md:py-20 bg-white scroll-mt-24" id="collection">
             <div className="text-center mb-8 md:mb-10">
               <h2 className="font-display text-3xl md:text-4xl font-black text-gray-900">
                 {activeCategory === "all" ? "Our Collection" : categories.find(c => c.key === activeCategory)?.label}

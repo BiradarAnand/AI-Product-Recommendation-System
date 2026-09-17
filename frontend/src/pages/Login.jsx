@@ -67,20 +67,20 @@ export default function Login() {
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif" }}
-      className="min-h-screen bg-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
+      className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden">
 
       {/* decorative blobs */}
-      <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10"
+      <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5"
         style={{ background: "radial-gradient(circle, #F5C518, transparent)", transform: "translate(30%,-30%)" }} />
-      <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-10"
-        style={{ background: "radial-gradient(circle, #F5C518, transparent)", transform: "translate(-30%,30%)" }} />
+      <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-5"
+        style={{ background: "radial-gradient(circle, #111, transparent)", transform: "translate(-30%,30%)" }} />
 
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-0 rounded-3xl overflow-hidden shadow-2xl relative z-10">
 
         {/* ── LEFT PANEL — brand ── */}
-        <div className="hidden lg:flex flex-col justify-between p-12 bg-gray-900 relative overflow-hidden">
+        <div className="hidden lg:flex flex-col justify-between p-12 relative overflow-hidden" style={{ background: "#111" }}>
           <div className="absolute inset-0"
-            style={{ background: "linear-gradient(135deg, #111 0%, #1a1a1a 50%, #0a0a0a 100%)" }} />
+            style={{ background: "linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 50%, #0a0a0a 100%)" }} />
           <div className="absolute top-1/2 left-1/2 w-64 h-64 rounded-full opacity-5"
             style={{ background: "#F5C518", transform: "translate(-50%,-50%)", filter: "blur(40px)" }} />
 

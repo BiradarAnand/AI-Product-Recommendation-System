@@ -574,7 +574,7 @@ export default function UnifiedChatbot() {
 
       {/* ── Chat window ── */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[390px] max-w-[calc(100vw-24px)] h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div className="fixed inset-0 z-50 flex flex-col bg-white">
 
           {/* Header */}
           <div className="bg-indigo-600 px-4 py-3 flex items-center gap-3 flex-shrink-0">

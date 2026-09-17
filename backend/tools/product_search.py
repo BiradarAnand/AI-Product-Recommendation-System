@@ -26,6 +26,8 @@ from db import get_catalog_db
 
 BUYWHERE_URL     = "https://api.buywhere.ai/v1/products/search"
 BUYWHERE_API_KEY = os.getenv("BUYWHERE_API_KEY")
+BUYWHERE_COUNTRY = os.getenv("BUYWHERE_COUNTRY")
+
 
 # ── Catalog category/sub_category mapping ──────────────────────────────────
 # The SQLite catalog uses:
@@ -207,9 +209,11 @@ def search_external(query: str, limit: int = 6) -> list:
             headers["Authorization"] = f"Bearer {BUYWHERE_API_KEY}"
 
         params = {
-            "q":     query,
+            "q": query,
             "limit": limit,
         }
+        if BUYWHERE_COUNTRY:
+            params["country_code"] = BUYWHERE_COUNTRY
 
         resp = requests.get(
             BUYWHERE_URL,
