@@ -1,17 +1,17 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()  # ✅ MUST be first — db.py reads env vars at import time
+
 from flask import Flask, request, jsonify, send_from_directory, Response
 import requests as http_requests
 from flask_cors import CORS
 from flask_mail import Mail, Message
-from flask_jwt_extended import JWTManager   # ✅ FIXED: added JWTManager import
+from flask_jwt_extended import JWTManager
 import random
-import os
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from auto_trainer import start_auto_trainer
+from db import get_db
 from chatbot_route import chat_bp
 from unified_chat_route import unified_chat_bp
-from db import get_db, get_catalog_db
-load_dotenv()
 
 # ── Blueprint imports ──────────────────────────────────────────────
 from recommend_routes import recommend_bp, load_engine
@@ -76,7 +76,6 @@ app.register_blueprint(admin_bp,       url_prefix="/api/admin")
 
 # ── Load ML models at startup ─────────────────────────────────────
 load_engine()
-start_auto_trainer()
 
 # # ── Mail config ───────────────────────────────────────────────────
 # app.config['MAIL_SERVER']   = 'smtp.gmail.com'
@@ -137,20 +136,18 @@ def proxy_image():
 def get_products():
     conn = None
     try:
-        conn = get_catalog_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM products") 
-        products = [dict(row) for row in cursor.fetchall()]
-        cursor.close()
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT * FROM products")
+        products = cur.fetchall()
+        cur.close()
         return jsonify(products)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
 
 @app.route("/test-db")
 def test_db():
@@ -169,22 +166,20 @@ def test_db():
 def get_product_by_id(product_id):
     conn = None
     try:
-        conn = get_catalog_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM products WHERE id = ?", (product_id,))
-        product = cursor.fetchone()
-        cursor.close()
-        if not product:
-            return jsonify({"error": "Product not found"}), 404
-        return jsonify(dict(product))
+        conn = get_db()
+        cur = conn.cursor(dictionary=True)
+        cur.execute("SELECT * FROM products WHERE id = %s", (product_id,))
+        product = cur.fetchone()
+        cur.close()
+        if product:
+            return jsonify(product)
+        return jsonify({"error": "Product not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         if conn:
-            try:
-                conn.close()
-            except:
-                pass
+            try: conn.close()
+            except: pass
 
 
 @app.route("/admin/add-product", methods=["POST"])

@@ -8,6 +8,8 @@ import ProductDetails from './pages/ProductDetails';
 import Admin          from './pages/Admin';
 import Profile        from './pages/Profile';
 import UnifiedChatbot from './pages/UnifiedChatbot';
+import Electronics    from './pages/Electronics';
+import Fashion        from './pages/Fashion';
 import { QuickViewProvider } from './components/ProductQuickView';
 
 function ProtectedRoute({ element, allowedRoles }) {
@@ -30,6 +32,8 @@ export default function App() {
         <UnifiedChatbot />
         <Routes>
           <Route path="/"                 element={<Home />} />
+          <Route path="/electronics"      element={<Electronics />} />
+          <Route path="/fashion"          element={<Fashion />} />
           <Route path="/product/:id"      element={<ProductDetails />} />
           <Route path="/occasion-chatbot" element={<Home />} />
 

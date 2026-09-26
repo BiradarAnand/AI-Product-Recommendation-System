@@ -64,7 +64,6 @@ def register():
 
     name  = data["name"].strip()
     email = data["email"].strip().lower()
-    phone = data.get("phone", "").strip() or None
     role  = get_user_role(email)
 
     conn = None
@@ -84,16 +83,16 @@ def register():
 
         try:
             cur.execute(
-                "INSERT INTO users (name, email, phone, password_hash, role) "
-                "VALUES (%s,%s,%s,%s,%s)",
-                (name, email, phone, hashed, role)
+                "INSERT INTO users (name, email, password_hash, role) "
+                "VALUES (%s,%s,%s,%s)",
+                (name, email, hashed, role)
             )
         except mysql.connector.errors.ProgrammingError:
             # Fallback if 'role' column doesn't exist yet
             cur.execute(
-                "INSERT INTO users (name, email, phone, password_hash) "
-                "VALUES (%s,%s,%s,%s)",
-                (name, email, phone, hashed)
+                "INSERT INTO users (name, email, password_hash) "
+                "VALUES (%s,%s,%s)",
+                (name, email, hashed)
             )
 
         conn.commit()

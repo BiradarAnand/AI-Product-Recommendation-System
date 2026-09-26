@@ -22,7 +22,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 load_dotenv()
 
-from db import get_catalog_db
 
 BUYWHERE_URL     = "https://api.buywhere.ai/v1/products/search"
 BUYWHERE_API_KEY = os.getenv("BUYWHERE_API_KEY")
@@ -167,15 +166,7 @@ def search_internal(filters: dict, limit: int = 6) -> list:
     params.append(limit)
 
     try:
-        conn = get_catalog_db()   # returns SQLite conn with row_factory = sqlite3.Row
-        cur  = conn.cursor()
-        try:
-            cur.execute(sql, params)
-            rows = cur.fetchall()
-        finally:
-            cur.close()
-            conn.close()
-
+        rows = []
         result = []
         for r in rows:
             row = dict(r)   # sqlite3.Row → plain dict

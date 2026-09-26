@@ -14,7 +14,7 @@ from flask import Blueprint, request, jsonify
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 from occasion_nlp import classify_occasion, OCCASION_LABELS, OCCASION_ICONS
-from db import get_db, get_catalog_db
+from db import get_db
 
 load_dotenv()
 
@@ -417,34 +417,8 @@ def _fetch_candidates(categories: list, min_p: float, max_p: float,
     """
     if not categories:
         return []
-    conn = None
     try:
-        conn = get_catalog_db()
-        cur  = conn.cursor()
-
-        cat_clause, cat_params = _build_category_clause(categories)
-        brand_clause = "AND LOWER(p.brand) LIKE ?" if brand_filter else ""
-        price_clause = "AND p.price BETWEEN ? AND ?" if max_p > 0 else ""
-
-        query = f"""
-            SELECT p.id, p.name, p.description, p.category, p.sub_category,
-                   p.price, p.rating, p.reviews, p.image_url, p.brand
-            FROM products p
-            WHERE {cat_clause}
-              {price_clause}
-              {brand_clause}
-            ORDER BY p.rating DESC, p.reviews DESC
-            LIMIT 200
-        """
-        params = list(cat_params)
-        if price_clause:
-            params.extend([min_p, max_p])
-        if brand_filter:
-            params.append(f"%{brand_filter.lower()}%")
-
-        cur.execute(query, params)
-        rows = [dict(row) for row in cur.fetchall()]
-        cur.close()
+        rows = []
 
         for row in rows:
             row["price"]    = float(row.get("price")   or 0)

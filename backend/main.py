@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from models import UserLogin, UserRegister, Product, Order
-from recommender import RecommendationEngine
+from recommendation_engine import HybridRecommendationEngine
 
 app = FastAPI(title="AI Product Recommendation API")
 
@@ -14,7 +14,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-recommender = RecommendationEngine()
+recommender = HybridRecommendationEngine()
+try:
+    recommender.load()
+except:
+    pass
 
 # --- Auth Routes ---
 @app.post("/api/register")
@@ -39,7 +43,8 @@ def get_products():
 def get_recommendations(user_id: int, history: str = ""):
     # History can be comma-separated product IDs passed by frontend
     history_list = [int(x) for x in history.split(",")] if history else []
-    recommendations = recommender.generateRecommendations(user_id, history_list)
+    # Use personalised_feed from the new HybridRecommendationEngine
+    recommendations = recommender.personalised_feed(user_id, top_n=10)
     return {"userId": user_id, "recommendations": recommendations}
 
 # --- Cart/Order Routes ---

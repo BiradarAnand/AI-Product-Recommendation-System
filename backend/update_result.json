@@ -1,0 +1,69 @@
+{
+    "updated": 548,
+    "still_zero_null": 44,
+    "unmatched_sample": [
+        "Redmi 10 Power (Power Black, 8GB RAM, 128GB Storage)",
+        "OnePlus Nord CE 2 Lite 5G (Blue Tide, 6GB RAM, 128GB Storage)",
+        "Samsung Galaxy M33 5G (Mystique Green, 6GB, 128GB Storage) | 6000mAh Battery | Upto 12GB RAM with RAM Plus | Travel Adapte...",
+        "OnePlus Nord CE 2 Lite 5G (Black Dusk, 6GB RAM, 128GB Storage)",
+        "Redmi 10 Power (Sporty Orange, 8GB RAM, 128GB Storage)",
+        "boAt Airdopes 141 Bluetooth Truly Wireless in Ear Earbuds with mic, 42H Playtime, Beast Mode(Low Latency Upto 80ms) for Ga...",
+        "Apple 20W USB-C Power Adapter (for iPhone, iPad & AirPods)",
+        "Samsung Galaxy M33 5G (Emerald Brown, 6GB, 128GB Storage) | 6000mAh Battery | Upto 12GB RAM with RAM Plus | Travel Adapter...",
+        "realme narzo 50A Prime (Flash Black, 4GB RAM+64GB Storage) Full High Definition+ Display |50MP AI Triple Camera| Charger I...",
+        "Redmi A1 (Light Blue, 2GB RAM, 32GB Storage) | Segment Best AI Dual Cam | 5000mAh Battery | Leather Texture Design | Andro...",
+        "OnePlus Nord CE 2 Lite 5G (Blue Tide, 8GB RAM, 128GB Storage)",
+        "boAt Airdopes Atom 81 True Wireless in Ear Earbuds with Upto 50H Playtime, Quad Mics ENx Tech, 13MM Drivers, Beast Mode(50...",
+        "boAt BassHeads 100 in-Ear Wired Headphones with Mic (Black)",
+        "Lapster 5-in-1 Multi-Function Laptop Cleaning Brush/Keyboard Cleaning kit/Gadget Cleaning kit Gap Duster Key-Cap Puller fo...",
+        "OnePlus Bullets Z2 Bluetooth Wireless in Ear Earphones with Mic, Bombastic Bass - 12.4 Mm Drivers, 10 Mins Charge - 20 Hrs...",
+        "Redmi A1 (Black, 2GB RAM, 32GB Storage) | Segment Best AI Dual Cam | 5000mAh Battery | Leather Texture Design | Android 12",
+        "Redmi 10A (Charcoal Black, 4GB RAM, 64GB Storage) | 2 Ghz Octa Core Helio G25 | 5000 mAh Battery | Finger Print Sensor | U...",
+        "OnePlus 11R 5G (Galactic Silver, 16GB RAM, 256GB Storage)",
+        "boAt Rockerz 255 Pro+ in-Ear Bluetooth Neckband with Upto 40 Hours Playback, ASAP\u0099 Charge, IPX7, Dual Pairing, BT v5.0, wi...",
+        "boAt Rockerz 255 Pro+ in-Ear Bluetooth Neckband with Upto 40 Hours Playback, ASAP\u0099 Charge, IPX7, Dual Pairing, BT v5.0, wi..."
+    ],
+    "unmatched_total": 9008,
+    "sample_updates": [
+        {
+            "name": "OnePlus Bullets Z2 Bluetooth Wireless in Ear Earphones with Mic, Bombastic Bass - 12.4 Mm Drivers, 10 Mins Charge - 20 Hrs...",
+            "price": 1999.0
+        },
+        {
+            "name": "Fire-Boltt Ninja Call Pro Plus 1.83\" Smart Watch with Bluetooth Calling, AI Voice Assistance, 100 Sports Modes IP67 Ratin...",
+            "price": 1799.0
+        },
+        {
+            "name": "boAt Airdopes 141 Bluetooth Truly Wireless in Ear Earbuds with 42H Playtime, Beast Mode(Low Latency Upto 80ms) for Gaming,...",
+            "price": 1299.0
+        },
+        {
+            "name": "boAt Rockerz 330 Bluetooth Wireless in Ear Earphones with mic, Upto 30 Hours Playtime, ASAP Charge, Signature Sound, Dual ...",
+            "price": 1099.0
+        },
+        {
+            "name": "boAt Wave Call Smart Watch, Smart Talk with Advanced Dedicated Bluetooth Calling Chip, 1.69 HD Display with 550 NITS & 70%...",
+            "price": 1999.0
+        },
+        {
+            "name": "boAt Airdopes 121v2 in-Ear True Wireless Earbuds with Upto 14 Hours Playback, 8MM Drivers, Battery Indicators, Lightweight...",
+            "price": 1099.0
+        },
+        {
+            "name": "OnePlus Nord 2T 5G (Jade Fog, 8GB RAM, 128GB Storage)",
+            "price": 28999.0
+        },
+        {
+            "name": "OnePlus Nord Buds True Wireless in Ear Earbuds with Mic, 12.4mm Titanium Drivers, Playback:Up to 30hr case, 4-Mic Design +...",
+            "price": 2799.0
+        },
+        {
+            "name": "OnePlus Nord 2T 5G (Gray Shadow, 8GB RAM, 128GB Storage)",
+            "price": 28999.0
+        },
+        {
+            "name": "Fire-Boltt Phoenix Smart Watch with Bluetooth Calling 1.3\",120+ Sports Modes, 240 * 240 PX High Res with SpO2, Heart Rate ...",
+            "price": 1699.0
+        }
+    ]
+}

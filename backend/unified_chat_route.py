@@ -2,10 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 from occasion_nlp import OCCASION_LABELS, OCCASION_ICONS
 from occasion_engine import OCCASION_CATEGORIES
-from agents.coordinator_agent import CoordinatorAgent
-
 unified_chat_bp = Blueprint("unified_chat", __name__)
-coordinator = CoordinatorAgent()
 
 @unified_chat_bp.route("/api/chat/unified", methods=["POST"])
 def unified_chat():
@@ -34,8 +31,7 @@ def unified_chat():
     }
 
     try:
-        result = coordinator.process(message, context)
-        return jsonify(result)
+        return jsonify({"error": "Agents not configured"}), 503
     except Exception as e:
         print(f"[unified_chat] error: {e}")
         import traceback; traceback.print_exc()

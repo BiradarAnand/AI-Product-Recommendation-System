@@ -15,38 +15,30 @@ import BrandShowcase from "../components/BrandShowcase";
 const API = axios.create({ baseURL: "http://localhost:5000" });
 
 const HERO_SLIDES = [
-  { image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=700&q=80", label: "Summer Edit 2026" },
-  { image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=700&q=80", label: "New Arrivals" },
-  { image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=700&q=80", label: "Street Style" },
-  { image: "https://images.unsplash.com/photo-1529391409740-59f2cea08bc6?w=700&q=80", label: "Premium Collection" },
-  { image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=700&q=80", label: "Modern Essentials" },
+  { image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=700&q=80", label: "Smartphones & Gadgets" },
+  { image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=700&q=80", label: "Laptops & Computers" },
+  { image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=700&q=80", label: "Audio & Headphones" },
+  { image: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=700&q=80", label: "Tablets & Wearables" },
+  { image: "https://images.unsplash.com/photo-1585298723682-7115561c51b7?w=700&q=80", label: "Smart Home Devices" },
 ];
 
 const DEMO_PRODUCTS = [
-  { id: 1,  name: "Running Sneakers",       brand: "Nike",   price: 2999, rating: 4.5, category: "Sports Shoes", image_url: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600&q=80" },
-  { id: 2,  name: "Classic White Sneakers", brand: "Adidas", price: 3299, rating: 4.5, category: "Casual Shoes", image_url: "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&q=80" },
-  { id: 3,  name: "Leather Boots",          brand: "Aldo",   price: 4999, rating: 4.6, category: "Casual Shoes", image_url: "https://images.unsplash.com/photo-1638247025967-b4e38f787b76?w=600&q=80" },
-  { id: 4,  name: "Slip-On Loafers",        brand: "Clarks", price: 3799, rating: 4.4, category: "Casual Shoes", image_url: "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=600&q=80" },
-  { id: 5,  name: "Oxford Button-Down",     brand: "Zara",   price: 1899, rating: 4.3, category: "Shirts",       image_url: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&q=80" },
-  { id: 6,  name: "Linen Casual Shirt",     brand: "H&M",    price: 1599, rating: 4.2, category: "Shirts",       image_url: "https://images.unsplash.com/photo-1588359348347-9bc6cbbb689e?w=600&q=80" },
-  { id: 7,  name: "Striped Polo Shirt",     brand: "Mango",  price: 1399, rating: 4.1, category: "Shirts",       image_url: "https://images.unsplash.com/photo-1625910513602-b2735be9e0f8?w=600&q=80" },
-  { id: 8,  name: "Graphic Print Tee",      brand: "H&M",    price:  899, rating: 4.4, category: "Tshirts",      image_url: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=600&q=80" },
-  { id: 9,  name: "Essential Crew Neck",    brand: "Gap",    price:  699, rating: 4.3, category: "Tshirts",      image_url: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80" },
-  { id: 10, name: "V-Neck Basic Tee",       brand: "Puma",   price:  749, rating: 4.2, category: "Tshirts",      image_url: "https://images.unsplash.com/photo-1516826957135-700dedea698c?w=600&q=80" },
-  { id: 11, name: "Slim Fit Chinos",        brand: "Zara",   price: 2299, rating: 4.4, category: "Trousers",     image_url: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&q=80" },
-  { id: 12, name: "Relaxed Fit Jeans",      brand: "Levi's", price: 2599, rating: 4.5, category: "Jeans",        image_url: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&q=80" },
-  { id: 13, name: "Track Pants",            brand: "H&M",    price: 2199, rating: 4.1, category: "Track Pants",  image_url: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=600&q=80" },
-  { id: 14, name: "Minimalist Steel Watch", brand: "Fossil", price: 5999, rating: 4.7, category: "Watches",      image_url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80" },
-  { id: 15, name: "Chronograph Sport",      brand: "Titan",  price: 8499, rating: 4.6, category: "Watches",      image_url: "https://images.unsplash.com/photo-1548169874-53e85f753f1e?w=600&q=80" },
-  { id: 16, name: "Classic Hoodie",         brand: "H&M",    price: 1799, rating: 4.7, category: "Hoodies",      image_url: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80" },
-  { id: 17, name: "Zip-Up Hoodie",          brand: "Puma",   price: 1999, rating: 4.3, category: "Hoodies",      image_url: "https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=600&q=80" },
-  { id: 18, name: "Tech Fleece Hoodie",     brand: "Nike",   price: 3199, rating: 4.5, category: "Hoodies",      image_url: "https://images.unsplash.com/photo-1578681994506-b8f463449011?w=600&q=80" },
+  { id: 1,  name: "iPhone 15 Pro",           brand: "Apple",   price: 134999, rating: 4.8, category: "Smartphones", image_url: "https://images.unsplash.com/photo-1695048133142-1a20484d2569?w=600&q=80" },
+  { id: 2,  name: "Samsung Galaxy S24",      brand: "Samsung", price:  89999, rating: 4.6, category: "Smartphones", image_url: "https://images.unsplash.com/photo-1610945264803-c22b62d2a7b3?w=600&q=80" },
+  { id: 3,  name: "MacBook Pro M3",          brand: "Apple",   price: 199999, rating: 4.9, category: "Laptops",     image_url: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=600&q=80" },
+  { id: 4,  name: "Dell XPS 15",             brand: "Dell",    price: 149999, rating: 4.5, category: "Laptops",     image_url: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&q=80" },
+  { id: 5,  name: "Sony WH-1000XM5",         brand: "Sony",    price:  29999, rating: 4.7, category: "Audio",       image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80" },
+  { id: 6,  name: "AirPods Pro 2",           brand: "Apple",   price:  24999, rating: 4.8, category: "Audio",       image_url: "https://images.unsplash.com/photo-1603351154351-5e2d0600bb77?w=600&q=80" },
+  { id: 7,  name: "iPad Pro 12.9",           brand: "Apple",   price: 109999, rating: 4.7, category: "Tablets",     image_url: "https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&q=80" },
+  { id: 8,  name: "Samsung Galaxy Tab S9",   brand: "Samsung", price:  72999, rating: 4.5, category: "Tablets",     image_url: "https://images.unsplash.com/photo-1561154464-82e9adf32764?w=600&q=80" },
+  { id: 9,  name: "Apple Watch Ultra 2",     brand: "Apple",   price:  89900, rating: 4.9, category: "Smartwatches",image_url: "https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?w=600&q=80" },
+  { id: 10, name: "Logitech MX Master 3",    brand: "Logitech",price:   8999, rating: 4.6, category: "Accessories", image_url: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=600&q=80" },
 ];
 
 const MINI_PRODUCTS = [
-  { label: "Shirts",  price: "₹1399", img: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&q=80" },
-  { label: "Watches", price: "₹5999", img: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80" },
-  { label: "Hoodie",  price: "₹1799", img: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=200&q=80" },
+  { label: "Phones",    price: "₹9,999",  img: "https://images.unsplash.com/photo-1610945264803-c22b62d2a7b3?w=200&q=80" },
+  { label: "Laptops",   price: "₹49,999", img: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=200&q=80" },
+  { label: "Earphones", price: "₹2,999",  img: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&q=80" },
 ];
 
 // ── Nav section modes ──────────────────────────────────────────────────────
@@ -457,7 +449,7 @@ function CategoryRow({ category, products, onSeeAll, cardProps }) {
 
 // ── Main Home Component ────────────────────────────────────────────────────
 
-export default function Home() {
+export default function Electronics() {
   const [products, setProducts]             = useState([]);
   const [search, setSearch]                 = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
@@ -516,14 +508,19 @@ export default function Home() {
   useEffect(() => {
     API.get("/products")
       .then((res) => {
-        const sorted = [...res.data].sort((a, b) => {
+        const electronics = res.data.filter(p => {
+          const cat = (p.category || "").toLowerCase();
+          return cat === "electronics" || cat === "smartphones" || cat === "laptops" ||
+                 cat === "audio" || cat === "tablets" || cat === "smartwatches" || cat === "accessories";
+        });
+        const sorted = [...electronics].sort((a, b) => {
           const aGood = (a.image_url || "").startsWith("http");
           const bGood = (b.image_url || "").startsWith("http");
           if (aGood && !bGood) return -1;
           if (!aGood && bGood) return  1;
           return (b.rating || 0) - (a.rating || 0);
         });
-        setProducts(sorted);
+        setProducts(sorted.length > 0 ? sorted : DEMO_PRODUCTS);
       })
       .catch(() => setProducts(DEMO_PRODUCTS));
   }, []);
@@ -714,10 +711,10 @@ export default function Home() {
             
           {/* Center: Primary Category Switch */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center bg-gray-100/80 rounded-full p-1 border border-gray-200 shadow-inner">
-            <Link to="/fashion" className="px-5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all bg-white shadow-sm text-gray-900">
+            <Link to="/fashion" className="px-5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all text-gray-500 hover:text-gray-900">
               Fashion
             </Link>
-            <Link to="/electronics" className="px-5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all text-gray-500 hover:text-gray-900">
+            <Link to="/electronics" className="px-5 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all bg-white shadow-sm text-gray-900">
               Electronics
             </Link>
           </div>
@@ -985,15 +982,15 @@ export default function Home() {
           <section className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center px-4 md:px-10 lg:px-20 py-10 md:py-16 max-w-[1400px] mx-auto [&>*]:min-w-0">
             <div className="relative z-10 order-2 md:order-1">
               <span className="inline-block bg-yellow-400 text-gray-900 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4 md:mb-6">
-                ✨ New Season 2026
+                ⚡ New Tech Arrivals 2026
               </span>
               <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-black leading-tight text-gray-900">
-                Daily Fabulous <br />
-                <span className="underline-yellow">Style for You.</span>
+                Latest Tech &amp; <br />
+                <span className="underline-yellow">Gadgets for You.</span>
               </h1>
               <p className="text-gray-500 mt-4 md:mt-5 text-base md:text-lg leading-relaxed max-w-md">
-                Ready to dress to impress with our fabulous style collection.
-                Curated looks for every mood and occasion.
+                Upgrade your life with the latest gadgets and electronics.
+                Curated tech for every need and budget.
               </p>
               <div className="flex flex-wrap gap-3 md:gap-4 mt-6 md:mt-8">
                 <button
